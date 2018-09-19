@@ -4,6 +4,7 @@ mutable struct Lattice
     nx::Int64
     nt::Int64
     mass::Float64
+    beta::Float64
 
     # Initilize derived variables
     ntot::Int64
@@ -92,10 +93,10 @@ mutable struct Spinor
     end
 end
 
-function test_latticesetup(nx::Int64, nt::Int64, mass::Float64)
+function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
 
     # Testing for correctness of finding neighbors
-    @time lattice = Lattice(nx, nt, mass)
+    @time lattice = Lattice(nx, nt, mass, beta)
     spinor = Spinor(nx*nt)
     println("=======================================================================")
     println("=====                        Lattice Setup                        =====")
@@ -136,4 +137,4 @@ function test_latticesetup(nx::Int64, nt::Int64, mass::Float64)
     display(spinor.s)
     println("")
 end
-#test_latticesetup(5, 5, 0.1)
+#test_latticesetup(5, 5, 0.1, 0.1)
