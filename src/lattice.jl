@@ -22,7 +22,7 @@ mutable struct Lattice
     linkt::Array{ComplexF64, 2}
 
     # Inner constructor method to initilize structure
-    function Lattice(nx::Int64, nt::Int64, mass::Float64)
+    function Lattice(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
         ntot = nx * nt
         leftx  = Array{Int64, 2}(undef, nx, nt)
         rightx = Array{Int64, 2}(undef, nx, nt)
@@ -72,7 +72,8 @@ mutable struct Lattice
         # The ordering here corresponds to the ordering of definition 
         # at the beginning of struct. If wrongly ordered, it will raise
         # errors
-        new(nx, nt, mass, ntot, lin_indx, leftx, rightx, upt, downt, corr_indx, 
+        new(nx, nt, mass, beta,
+            ntot, lin_indx, leftx, rightx, upt, downt, corr_indx, 
             anglex, anglet, linkx, linkt)
     end
 end

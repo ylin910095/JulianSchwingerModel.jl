@@ -68,15 +68,20 @@ function gamma5_Dslash_wilson_matrix(spinor_in::Spinor,
     return spinor_out
 end
 function test_gamma5Dslash()
-    nx = 50
-    nt = 50
+    nx = 20
+    nt = 30
     mass = 0.02
-    lattice = Lattice(nx, nt, mass)
+    beta = 0.1
+    outputflag = 0 # 0 for no error, nonzero for more than one errors
+    lattice = Lattice(nx, nt, mass, beta)
     spinor_in = Spinor(lattice.ntot)
     for i in 1:lattice.ntot
         spinor_in.s[i][1] = randn(Float64)
         spinor_in.s[i][2] = randn(Float64)
     end
+
+
+    # Check correctness
     println("=======================================================================")
     println("=====                      gamma_5*Dslash Wilson                  =====")
     println("=======================================================================")
@@ -91,11 +96,53 @@ function test_gamma5Dslash()
         ddiff += spinor_out_1.s[i][2]-spinor_out_2.s[i][2]
     end
     if ddiff == 0
-        println("CORRECTNESS PASSED: Two functions give same gamma_5*Dslash")
-        return 0
+        println("COMPARISON PASSED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix")
     else
-        println("CORRECTNESS FAILED: Two functions give different gamma_5*Dslash")
-        return 1
+        println("COMPARISON FAILED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix")
+        outputflag += 1
     end
+
+    # Now check hermiticity of gamma5*Dslash by constructing
+    # the full matrix representation (only work for small ntot)
+    Dslash = Array{ComplexF64, 4}(undef, lattice.ntot, lattice.ntot, 2, 2)
+    spinor_out = gamma5_Dslash_wilson(spinor_in, lattice, 0.02)
+    for i in 1:lattice.ntot
+        for j in 1:lattice.ntot
+            for k in 1:2
+                for l in 1:2
+                    spinor_in = Spinor(lattice.ntot)
+                    spinor_in.s[j][l] = 1.0
+                    spinor_out = gamma5_Dslash_wilson(spinor_in, lattice, 0.02)
+                    Dslash[i,j,k,l] = spinor_out.s[i][k]
+                end
+            end
+        end
+    end
+    
+    hermiflag = 0
+    for i in 1:lattice.ntot
+        for j in 1:lattice.ntot
+            for k in 1:2
+                for l in 1:2
+                    if Dslash[i,j,k,l] != conj(Dslash[j,i,l, k])
+                        hermiflag += 1
+                    end
+                end
+            end
+        end
+    end
+    if hermiflag == 0
+        println("HERMITICITY PASSED: gamma5_Dslash_wilson")
+    else
+        println("HERMITICITY FAILED: gamma5_Dslash_wilson")
+    end
+    outputflag += hermiflag
+
+    if outputflag == 0
+        println("ALL TESTS PASSED: gamma5_Dslash_wilson")
+    else
+        println("TESTS FAILED: gamma5_Dslash_wilson")
+    end
+    return outputflag
 end
 test_gamma5Dslash()
