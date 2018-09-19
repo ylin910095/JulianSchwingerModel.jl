@@ -1,57 +1,139 @@
-
 # Strcuture of Arrays
 mutable struct Lattice
     # Inputs
     nx::Int64
     nt::Int64
+    mass::Float64
 
-    # Initilized(derived) variables
+    # Initilize derived variables
     ntot::Int64
+    lin_indx::Array{Int64, 2}
     leftx::Array{Int64, 2}
     rightx::Array{Int64, 2}
     upt::Array{Int64, 2}
     downt::Array{Int64, 2}
     corr_indx::Array{Tuple{Int64, Int64}, 2} # coordinate tuple in the order of (x,t)
 
+    # Gauge link and gauge angles
+    anglex::Array{Float64}
+    anglet::Array{Float64}
+    linkx::Array{ComplexF64, 2}
+    linkt::Array{ComplexF64, 2}
+
     # Inner constructor method to initilize structure
-    function Lattice(nx::Int64, nt::Int64)
+    function Lattice(nx::Int64, nt::Int64, mass::Float64)
         ntot = nx * nt
         leftx  = Array{Int64, 2}(undef, nx, nt)
         rightx = Array{Int64, 2}(undef, nx, nt)
         upt = Array{Int64, 2}(undef, nx, nt)
         downt = Array{Int64, 2}(undef, nx, nt)
         corr_indx = Array{Tuple{Int64, Int64}, 2}(undef, nx, nt)
+        lin_indx = Array{Int64, 2}(undef, nx, nt)
+
+        # Gauge stuff
+        anglex = Array{Float64, 2}(undef, nx, nt)
+        anglet = Array{Float64, 2}(undef, nx, nt)
+        linkx = Array{ComplexF64, 2}(undef, nx, nt)
+        linkt = Array{ComplexF64, 2}(undef, nx, nt)
+
+
         for i in 1:ntot
             # Find the closest neighbors and coordinate indices
-            leftx[i] = i - 1 
-            rightx[i] = i + 1
-            upt[i] = i + nt
-            downt[i] = i - nt 
+            lin_indx[i] = i
+            if (i-1) % nx != 0
+                leftx[i] = i - 1 
+            else
+                leftx[i] = i + nx - 1 
+            end
+            if i % nx != 0
+                rightx[i] = i + 1
+            else
+                rightx[i] = i - nx + 1
+            end
+            upt[i] = i + nx
+            if upt[i] > ntot
+                upt[i] -= ntot
+            end
+            downt[i] = i - nx
+            if downt[i] < 1
+                downt[i] += ntot
+            end
             corr_indx[i] = ((i-1)%nx + 1, 
                             floor((i-1)/nx) + 1)
-            # Imposing boundary condition (periodic)
-            for il in [leftx, rightx, upt, downt]
-                if il[i] < 1
-                    il[i] = ntot + il[i]
-                elseif il[i] > ntot && il[i] < 2*ntot + 1
-                    il[i] = il[i] - ntot
-                end
-            end
+
+            # Cold start for gauge links
+            anglex[i] = 0.0
+            anglet[i] = 0.0
+            linkx[i] = exp(anglex[i]*im)
+            linkt[i] = exp(anglet[i]*im)
+
         end
         # The ordering here corresponds to the ordering of definition 
         # at the beginning of struct. If wrongly ordered, it will raise
-        # some weird errors
-        new(nx, nt, ntot, leftx, rightx, upt, downt, corr_indx)
+        # errors
+        new(nx, nt, mass, ntot, lin_indx, leftx, rightx, upt, downt, corr_indx, 
+            anglex, anglet, linkx, linkt)
+    end
+end
+"""
+spinor = Spinor(ntot) will create a two-components spinor of lengt ntot
+that are initilized to zero at all lattice points
+"""
+mutable struct Spinor
+    ntot::Int64
+    s::Vector{Vector{ComplexF64}} # The components of spinor
+    # Inner constructor method to initilize structure
+    function Spinor(ntot::Int64)
+        s = Vector{Vector{ComplexF64}}(undef, ntot)
+        for i in 1:ntot
+            s[i] = [0.0, 0.0]
+        end
+        new(ntot, s)
     end
 end
 
-function test(nx::Int64, nt::Int64)
-    # Testing routines
-    @time lattice = Lattice(2^1, 2^1)
-    println(lattice.ntot, " ", lattice.nx, " ", lattice.nt)
-    println("left_x:  ", lattice.leftx)
-    println("right_x: ", lattice.rightx)
-    println("up_t:    ", lattice.upt)
-    println("down_t:  ", lattice.downt)
-    println("Coordinate indices: ", lattice.corr_indx)
+function test_latticesetup(nx::Int64, nt::Int64, mass::Float64)
+
+    # Testing for correctness of finding neighbors
+    @time lattice = Lattice(nx, nt, mass)
+    spinor = Spinor(nx*nt)
+    println("=======================================================================")
+    println("=====                        Lattice Setup                        =====")
+    println("=======================================================================")
+    println("lattice dimensions (nx, nt): ", lattice.nx, ", ", lattice.nt)
+    println("Coordinate indices: ")
+    display(lattice.corr_indx)
+    println("\n\nLinear indices")
+    display(lattice.lin_indx)
+    println("\n\nleft_x:")
+    display(lattice.leftx)
+    println("\n\nright_x: ")
+    display(lattice.rightx)
+    println("\n\nup_t:    ")
+    display(lattice.upt)
+    println("\n\ndown_t:  ")
+    display(lattice.downt)
+    println("")
+    println("=======================================================================")
+    println("=====                      Gauge Angles/Links                     =====")
+    println("=======================================================================")
+    println("Gauge angles in x direction: ")
+    display(lattice.anglex)
+    println("")
+    println("Gauge angles in t direction: ")
+    display(lattice.anglet)
+    println("")
+    println("Gauge links in x direction: ")
+    display(lattice.linkx)
+    println("")
+    println("Gauge Angles in t direction: ")
+    display(lattice.linkt)
+    println("")
+    println("=======================================================================")
+    println("=====                          Spinors                            =====")
+    println("=======================================================================")
+    println("Initilized zero spinor:")
+    display(spinor.s)
+    println("")
 end
+#test_latticesetup(5, 5, 0.1)
