@@ -8,13 +8,13 @@ include("./spinor.jl")
 """
 Q = gamma5_Dslash_wilson
 Solve Qx = source using conjugate gradient
-x will be updated in-place at the end
+return spinor answer
 """
 function cg_Q(lattice::Lattice, mass::Float64, x0::Spinor, source::Spinor)
     y = unravel(source.s)
     x0 = unravel(x0.s)
     Q = gamma5_Dslash_linearmap(lattice, mass)
-    cg!(x0, Q, y; tol=1e-30, verbose=true)
+    cg!(x0, Q, y; tol=1e-20, verbose=true)
     return Spinor(lattice.ntot, ravel(x0))
 end
 
