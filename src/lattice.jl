@@ -77,28 +77,11 @@ mutable struct Lattice
             anglex, anglet, linkx, linkt)
     end
 end
-"""
-spinor = Spinor(ntot) will create a two-components spinor of lengt ntot
-that are initilized to zero at all lattice points
-"""
-mutable struct Spinor
-    ntot::Int64
-    s::Vector{Vector{ComplexF64}} # The components of spinor
-    # Inner constructor method to initilize structure
-    function Spinor(ntot::Int64)
-        s = Vector{Vector{ComplexF64}}(undef, ntot)
-        for i in 1:ntot
-            s[i] = [0.0, 0.0]
-        end
-        new(ntot, s)
-    end
-end
 
 function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
 
     # Testing for correctness of finding neighbors
     @time lattice = Lattice(nx, nt, mass, beta)
-    spinor = Spinor(nx*nt)
     println("=======================================================================")
     println("=====                        Lattice Setup                        =====")
     println("=======================================================================")
@@ -130,12 +113,6 @@ function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
     println("")
     println("Gauge Angles in t direction: ")
     display(lattice.linkt)
-    println("")
-    println("=======================================================================")
-    println("=====                          Spinors                            =====")
-    println("=======================================================================")
-    println("Initilized zero spinor:")
-    display(spinor.s)
     println("")
 end
 #test_latticesetup(5, 5, 0.1, 0.1)
