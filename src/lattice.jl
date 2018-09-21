@@ -3,7 +3,7 @@ mutable struct Lattice
     # Inputs
     nx::Int64
     nt::Int64
-    mass::Float64
+    mass::Float64 # Sea quarks masses
     beta::Float64
 
     # Initilize derived variables
@@ -54,7 +54,7 @@ mutable struct Lattice
             upt[i] = i + nx
             if upt[i] > ntot
                 upt[i] -= ntot
-            end
+            end 
             downt[i] = i - nx
             if downt[i] < 1
                 downt[i] += ntot

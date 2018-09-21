@@ -12,8 +12,7 @@ function SG(i::Int64, lattice::Lattice)
 end
 
 """
-Derivative of SG with respect to \theta_1(x) (gauge angle in x direction)
-Used in HMC updating.
+Gauge force for U(x=i, \mu=1)
 """
 function dSG1(i::Int64, lattice::Lattice)
     return - lattice.beta * (
@@ -26,8 +25,7 @@ function dSG1(i::Int64, lattice::Lattice)
 end
 
 """
-Derivative of SG with respect to \theta_2(x) (gauge angle in t direction)
-Used in HMC updating.
+Gauge force for U(x=i, \mu=2)
 """
 function dSG2(i::Int64, lattice::Lattice}
     return lattice.beta * (
@@ -35,6 +33,6 @@ function dSG2(i::Int64, lattice::Lattice}
                 lattice.anglex[lattice.leftx[lattice.upt[i]]] -
                 lattice.anglet[lattice.leftx[i]]) -
             sin(lattice.anglex[i] + lattice.anglet[lattice.rightx[i]] - 
-                lattice.anglet[lattice.upt[i]] - lattice.anglet[i])
+                lattice.anglex[lattice.upt[i]] - lattice.anglet[i])
             )
 end

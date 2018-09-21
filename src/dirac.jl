@@ -4,79 +4,81 @@ using LinearMaps
 include("./lattice.jl")
 include("./spinor.jl")
 include("./gamma_matrices.jl")
+include("./randlattice.jl")
 
-function gamma5_Dslash_wilson(spinor_in::Spinor, 
+function gamma5_Dslash_wilson(field_in::Field, 
                               lattice::Lattice,
                               mass::Float64)
     factor = 2 + mass
-    spinor_out = Spinor(lattice.ntot)
+    field_out = zero!(Field(undef, lattice.ntot))
     for i in 1:lattice.ntot
         left1_i = lattice.leftx[i]
         left2_i = lattice.downt[i]
         right1_i = lattice.rightx[i]
         right2_i = lattice.upt[i]
-        in_right1_i = spinor_in.s[right1_i]
-        in_right2_i = spinor_in.s[right2_i]
-        in_left1_i = spinor_in.s[left1_i]
-        in_left2_i = spinor_in.s[left2_i]
+        in_right1_i = field_in[right1_i]
+        in_right2_i = field_in[right2_i]
+        in_left1_i = field_in[left1_i]
+        in_left2_i = field_in[left2_i]
         link1 = lattice.linkx
         link2 = lattice.linkt
         cconj_link1_left1_i = conj(link1[left1_i])
         cconj_link2_left2_i = conj(link2[left2_i])
         
         # First spinor component
-        spinor_out.s[i][1] = factor * spinor_in.s[i][1] - 0.5*(
+        field_out[i][1] = factor * field_in[i][1] - 0.5*(
                 link1[i]*(in_right1_i[1] - in_right1_i[2]) +
                 cconj_link1_left1_i * (in_left1_i[1] + in_left1_i[2])  +
                 link2[i] * (in_right2_i[1] + im * in_right2_i[2]) +
                 cconj_link2_left2_i * (in_left2_i[1] - im * in_left2_i[2])
                 )
         # Second spinor component
-        spinor_out.s[i][2] = -factor * spinor_in.s[i][2] - 0.5*(
+        field_out[i][2] = -factor * field_in[i][2] - 0.5*(
             link1[i] * (in_right1_i[1] - in_right1_i[2]) -
             cconj_link1_left1_i * (in_left1_i[1]  + in_left1_i[2])  +
             link2[i] * (im * in_right2_i[1] - in_right2_i[2]) -
             cconj_link2_left2_i * (im * in_left2_i[1]  + in_left2_i[2])
             )
     end
-    return spinor_out
+    return field_out
 end
 
-function gamma5_Dslash_wilson(spinor_in::Spinor, 
+function gamma5_Dslash_wilson(field_in::Field, 
                               lattice::Lattice,
                               mass::Float64)
     factor = 2 + mass
-    spinor_out = Spinor(lattice.ntot)
+    field_out = Field(undef, lattice.ntot)
+    zero!(field_out)
     for i in 1:lattice.ntot
         left1_i = lattice.leftx[i]
         left2_i = lattice.downt[i]
         right1_i = lattice.rightx[i]
         right2_i = lattice.upt[i]
-        in_right1_i = spinor_in.s[right1_i]
-        in_right2_i = spinor_in.s[right2_i]
-        in_left1_i = spinor_in.s[left1_i]
-        in_left2_i = spinor_in.s[left2_i]
+        in_right1_i = field_in[right1_i]
+        in_right2_i = field_in[right2_i]
+        in_left1_i = field_in[left1_i]
+        in_left2_i = field_in[left2_i]
         link1 = lattice.linkx
         link2 = lattice.linkt
         cconj_link1_left1_i = conj(link1[left1_i])
         cconj_link2_left2_i = conj(link2[left2_i])
         
         # First spinor component
-        spinor_out.s[i][1] = factor * spinor_in.s[i][1] - 0.5*(
+        field_out[i][1] = factor * field_in[i][1] - 0.5*(
                 link1[i]*(in_right1_i[1] - in_right1_i[2]) +
                 cconj_link1_left1_i * (in_left1_i[1] + in_left1_i[2])  +
                 link2[i] * (in_right2_i[1] + im * in_right2_i[2]) +
                 cconj_link2_left2_i * (in_left2_i[1] - im * in_left2_i[2])
                 )
         # Second spinor component
-        spinor_out.s[i][2] = -factor * spinor_in.s[i][2] - 0.5*(
+        field_out[i][2] = -factor * field_in[i][2] - 0.5*(
             link1[i] * (in_right1_i[1] - in_right1_i[2]) -
             cconj_link1_left1_i * (in_left1_i[1]  + in_left1_i[2])  +
             link2[i] * (im * in_right2_i[1] - in_right2_i[2]) -
             cconj_link2_left2_i * (im * in_left2_i[1]  + in_left2_i[2])
             )
     end
-    return spinor_out
+    return field_out
 end
 
 """
@@ -85,11 +87,12 @@ matrix multiplication instead of explicit assignment
 to real and imaginary part.
 This is slow and should not be used in production.
 """
-function gamma5_Dslash_wilson_matrix(spinor_in::Spinor, 
+function gamma5_Dslash_wilson_matrix(field_in::Field, 
                                      lattice::Lattice,
                                      mass::Float64)
+    field_out = Field(undef, lattice.ntot)
+    zero!(field_out)
     factor = 2 + mass
-    spinor_out = Spinor(lattice.ntot)
     for i in 1:lattice.ntot
         left1_i = lattice.leftx[i]
         left2_i = lattice.downt[i]
@@ -97,14 +100,14 @@ function gamma5_Dslash_wilson_matrix(spinor_in::Spinor,
         right2_i = lattice.upt[i]
         link1 = lattice.linkx
         link2 = lattice.linkt
-        spinor_out.s[i] = gamma5 * (factor .* spinor_in.s[i] - 0.5*(
-            link1[i] .* (I - gamma1) * spinor_in.s[right1_i] +
-            conj(link1[left1_i]) .* (I + gamma1) * spinor_in.s[left1_i] +
-            link2[i] .* (I - gamma2) * spinor_in.s[right2_i] + 
-            conj(link2[left2_i]) .* (I + gamma2) * spinor_in.s[left2_i]
+        field_out[i] = gamma5 * (factor .* field_in[i] - 0.5*(
+            link1[i] .* (I - gamma1) * field_in[right1_i] +
+            conj(link1[left1_i]) .* (I + gamma1) * field_in[left1_i] +
+            link2[i] .* (I - gamma2) * field_in[right2_i] + 
+            conj(link2[left2_i]) .* (I + gamma2) * field_in[left2_i]
             ))
     end
-    return spinor_out
+    return field_out
 end
 
 """
@@ -113,7 +116,7 @@ This wrapper is required for input to IterativeSolvers and it is not optimal.
 """
 function gamma5_Dslash_linearmap(lattice::Lattice, mass::Float64)
     # We need to unravel nested array to use IterativeSolvers
-    A(v::Vector{ComplexF64}) = unravel(gamma5_Dslash_wilson(Spinor(lattice.ntot, ravel(v)), lattice, mass).s)
+    A(v::Vector{ComplexF64}) = unravel(gamma5_Dslash_wilson(ravel(v), lattice, mass))
     g5D = LinearMap{ComplexF64}(A, nothing, 2*lattice.ntot, 2*lattice.ntot; ishermitian=true)
     return g5D
 end
@@ -127,7 +130,7 @@ function test_gamma5Dslash()
     lattice = Lattice(nx, nt, mass, beta)
     spinor_in = Spinor(lattice.ntot)
     for i in 1:lattice.ntot
-        spinor_in.s[i] = [randn(Float64), randn(Float64)]
+        spinor_in.s[i] = [gauss(), gauss()]
     end
 
     # Check correctness
@@ -136,13 +139,13 @@ function test_gamma5Dslash()
     println("=======================================================================")
     println("Lattice dimension: (nx=$nx, nt=$nt), mass: $mass")
     print("gamma_5 * Dslash explicit form: ")
-    @time spinor_out_1 = gamma5_Dslash_wilson(spinor_in, lattice, mass)
+    @time field_out1 = gamma5_Dslash_wilson(spinor_in.s, lattice, mass)
     print("gamma_5 * Dslash matrix form: ")
-    @time spinor_out_2 = gamma5_Dslash_wilson_matrix(spinor_in, lattice, mass)
+    @time field_out2 = gamma5_Dslash_wilson_matrix(spinor_in.s, lattice, mass)
     ddiff = 0.0
     for i in 1:lattice.ntot
-        ddiff += spinor_out_1.s[i][1] - spinor_out_2.s[i][1]
-        ddiff += spinor_out_1.s[i][2] - spinor_out_2.s[i][2]
+        ddiff += field_out1[i][1] - field_out2[i][1]
+        ddiff += field_out1[i][2] - field_out2[i][2]
     end
     if ddiff == 0
         println("COMPARISON PASSED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix")
@@ -162,7 +165,7 @@ function test_gamma5Dslash()
             for k in 1:2
                 for l in 1:2
                     spinor_in.s[j][l] = 1.0
-                    spinor_out = gamma5_Dslash_wilson(spinor_in, lattice, 0.02)
+                    spinor_out.s = gamma5_Dslash_wilson(spinor_in.s, lattice, 0.02)
                     spinor_in.s[j][l] = 0.0 # reset to zero
                     Dslash[i,j,k,l] = spinor_out.s[i][k]
                 end
@@ -194,18 +197,18 @@ function test_gamma5Dslash()
     g5D = gamma5_Dslash_linearmap(lattice, mass)
     spinor_in = Spinor(lattice.ntot)
     for i in 1:lattice.ntot
-        spinor_in.s[i] = [randn(Float64), randn(Float64)]
+        spinor_in.s[i] = [gauss(), gauss()]
     end
 
     print("gamma_5 * Dslash LinearMap form: ")
-    @time fieldout = ravel(g5D * unravel(spinor_in.s))
+    @time field_out = ravel(g5D * unravel(spinor_in.s))
     print("gamma_5 * Dslash explicit form: ")
-    @time spinor_out = gamma5_Dslash_wilson(spinor_in, lattice, mass)
+    @time spinor_out.s = gamma5_Dslash_wilson(spinor_in.s, lattice, mass)
 
     ddiff = 0
     for i in 1:lattice.ntot
-        ddiff += fieldout[i][1]-spinor_out.s[i][1]
-        ddiff += fieldout[i][2]-spinor_out.s[i][2]
+        ddiff += field_out[i][1]-spinor_out.s[i][1]
+        ddiff += field_out[i][2]-spinor_out.s[i][2]
     end
     if ddiff == 0
         println("CORRECTNESS PASSED: gamma5_Dslash_linearmap ")

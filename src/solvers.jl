@@ -5,6 +5,7 @@ include("./lattice.jl")
 include("./gamma_matrices.jl")
 include("./dirac.jl")
 include("./spinor.jl")
+include("./randlattice.jl")
 """
 Q = gamma5_Dslash_wilson
 Solve Qx = source using conjugate gradient
@@ -28,17 +29,17 @@ function test_cg()
     x0 = Spinor(lattice.ntot)
     # Random source
     for i in 1:lattice.ntot
-        source.s[i] = [randn(Float64) + im*randn(Float64), 
-                       randn(Float64) + im*randn(Float64)]
+        source.s[i] = [gauss() + im*gauss(), 
+                       gauss() + im*gauss()]
     end
     spinor_out = cg_Q(lattice, mass, x0, source)
 
     # Test to see if the solutions have converged
-    y = gamma5_Dslash_wilson(spinor_out, lattice, mass)
+    y = gamma5_Dslash_wilson(spinor_out.s, lattice, mass)
     ddiff = 0
     for i in 1:lattice.ntot
-        ddiff += y.s[i][1] - source.s[i][1]
-        ddiff += y.s[i][2] - source.s[i][2]
+        ddiff += y[i][1] - source.s[i][1]
+        ddiff += y[i][2] - source.s[i][2]
     end
     """
     display(unravel(y.s))
@@ -49,4 +50,4 @@ function test_cg()
     println("Final difference: $ddiff")
 end
 
-test_cg()
+#test_cg()
