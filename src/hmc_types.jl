@@ -46,7 +46,7 @@ mutable struct PseudoFermion
     function PseudoFermion(lattice::Lattice, g5Dslash::Any)
         pf = Spinor(lattice.ntot)
         Dm1pf = Spinor(lattice.ntot)
-        for i in lattice.ntot
+        for i in 1:lattice.ntot
             # Sample D^{-1}\phi according to normal distribution
             Dm1pf.s[i] = [gauss() + im*gauss(), gauss() + im*gauss()]
         end

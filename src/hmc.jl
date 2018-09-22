@@ -24,13 +24,13 @@ end
 Perform hybrid monte-carlo update to lattice using hmcparam parameters
 """
 function HMCWilson_update(lattice::Lattice, hmcparam::HMCParam)
-    # Generate random gauge momenta 
-    p = HMCMom(lattice)
     # Generate random PseudoFermion if not quenched
     if hmcparam.quenched == false
         acceptno = 0
         for ihmcstep in 1:hmcparam.niters 
             println("--> HMC Steps: $ihmcstep/$(hmcparam.niters)")
+            # Generate random gauge momenta and pseudo-fermions
+            p = HMCMom(lattice)
             pf = PseudoFermion(lattice, gamma5_Dslash_wilson)
 
             # Before integration, save the old hamiltonian for accept-reject step
