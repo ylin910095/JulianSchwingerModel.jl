@@ -13,3 +13,8 @@ end
 Gaussian random number with mean of 0 and std of 1
 """
 gauss() = randn(rng)
+
+"""
+Random number between 0 and 1
+"""
+rand01() = rand(rng, Float64)

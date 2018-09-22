@@ -7,7 +7,7 @@ include("./gamma_matrices.jl")
 include("./randlattice.jl")
 
 """
-Q = gamma5*Dslash operator
+gamma5*Dslash operator
 Gauge fields have periodic boundary condition in all directions, whereas
 fermions are periodic in spacelike direction (x-direction or 1 direction) and 
 antiperiodic in timelike direction (t-direction or 2 direction)
@@ -220,4 +220,4 @@ function test_gamma5Dslash()
     end
     return outputflag
 end
-test_gamma5Dslash()
+#test_gamma5Dslash()

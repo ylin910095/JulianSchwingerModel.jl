@@ -4,7 +4,6 @@ that are initilized to zero at all lattice points
 """
 # Aliasing commonly used type
 Field = Vector{Vector{ComplexF64}}
-
 """
 Return field with all zeros. Required for IterativeSolvers
 """

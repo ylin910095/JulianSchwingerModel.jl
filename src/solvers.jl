@@ -11,12 +11,12 @@ Q = gamma5_Dslash_wilson
 Solve Qx = source using conjugate gradient
 return spinor answer
 """
-function cg_Q(lattice::Lattice, mass::Float64, x0::Spinor, source::Spinor)
-    y = unravel(source.s)
-    x0 = unravel(x0.s)
+function cg_Q(lattice::Lattice, mass::Float64, x0::Field, source::Field)
+    y = unravel(source)
+    x0 = unravel(x0)
     Q = gamma5_Dslash_linearmap(lattice, mass)
-    cg!(x0, Q, y; tol=1e-20, verbose=true)
-    return Spinor(lattice.ntot, ravel(x0))
+    cg!(x0, Q, y; tol=1e-8, verbose=false)
+    return ravel(x0)
 end
 
 function test_cg()
@@ -32,10 +32,10 @@ function test_cg()
         source.s[i] = [gauss() + im*gauss(), 
                        gauss() + im*gauss()]
     end
-    spinor_out = cg_Q(lattice, mass, x0, source)
+    field_out = cg_Q(lattice, mass, x0.s, source.s)
 
     # Test to see if the solutions have converged
-    y = gamma5_Dslash_wilson(spinor_out.s, lattice, mass)
+    y = gamma5_Dslash_wilson(field_out, lattice, mass)
     ddiff = 0
     for i in 1:lattice.ntot
         ddiff += y[i][1] - source.s[i][1]
