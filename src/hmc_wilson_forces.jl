@@ -2,36 +2,6 @@ include("./lattice.jl")
 include("./solvers.jl")
 include("./hmc_types.jl")
 """
-Gamma5PseudoFermion field will be generated according to PDF:
-
-P(phi) = N*exp(D^{-1}phi, D^{-1}phi) 
-
-where phi is PF field, D is the Dslash_wilson operator,
-and N is some normalization factor.
-
-g5Dslash input for the inner constructor is the 
-gamma5 * Dslash operator
-in which has expect arguments:
-    field_in::Field, lattice::Lattice, mass::Float64
-and outputs gamma5 * pseudofermion Field
-"""
-mutable struct PseudoFermion
-    pf::Spinor
-    Dm1pf::Spinor
-    function PseudoFermion(lattice::Lattice, g5Dslash::Any)
-        pf = Spinor(lattice.ntot)
-        Dm1pf = Spinor(lattice.ntot)
-        for i in lattice.ntot
-            # Sample D^{-1}\phi according to normal distribution
-            Dm1pf.s[i] = [gauss() + im*gauss(), gauss() + im*gauss()]
-        end
-        pf.s = gamma5mul(g5Dslash(Dm1pf.s, lattice, lattice.mass))
-        new(pf, Dm1pf)
-    end
-end
-
-
-"""
 S_gauge = sum_i beta(1 - Re U_{plaq})
 Caluate the gauge action contribution at lattice
 site i.  The constant beta * 1 is ignored in action.
