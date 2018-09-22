@@ -6,22 +6,31 @@ include("./hmc_wilson_forces.jl")
 
 
 function leapfrog!(p::HMCMom, pf::PseudoFermion, nsteps::Int64, 
-                  dtau::Float64, lattice::Lattice)
+                  dtau::Float64, quenched::Bool, lattice::Lattice)
+    updatemom!(p, pf, dtau./2, quenched, lattice)
     for istep in 1:nsteps
         println("Leapfrog steps: $istep/$nsteps")
-        updatemom!(p, pf, dtau./2, lattice)
         updategauge!(p, dtau, lattice)
-        updatemom!(p, pf, dtau./2, lattice)
+        updatemom!(p, pf, dtau, quenched, lattice)
     end
+    updatemom!(p, pf, dtau./2, quenched, lattice)
 end
 
-function updatemom!(p::HMCMom, pf::PseudoFermion, dtau::Float64,
+function updatemom!(p::HMCMom, pf::PseudoFermion, dtau::Float64, quenched::Bool,
                     lattice::Lattice)
-    # pforce_common involves inversion so we want to do it outside of the loop
-    lhs = pforce_common(pf, lattice)
+    if quenched == false
+        # pforce_common involves inversion so we want to do it outside of the loop
+        # lhs = left-hand-side of dot product and psi =  D^{-1}phi for phi = pf field
+        lhs, psi = pforce_common(pf, lattice)
+    end
     for i in 1:lattice.ntot
-        p.gpx[i] = p.gpx[i] - dtau*(dSG1(i, lattice) + pforce1(i, pf, lattice, lhs))
-        p.gpt[i] = p.gpt[i] - dtau*(dSG2(i, lattice) + pforce2(i, pf, lattice, lhs))
+        if quenched == false
+            p.gpx[i] = p.gpx[i] - dtau*(dSG1(i, lattice) + pforce1(i, pf, lattice, psi, lhs))
+            p.gpt[i] = p.gpt[i] - dtau*(dSG2(i, lattice) + pforce2(i, pf, lattice, psi, lhs))
+        else
+            p.gpx[i] = p.gpx[i] - dtau*(dSG1(i, lattice))
+            p.gpt[i] = p.gpt[i] - dtau*(dSG2(i, lattice))
+        end
     end
 end
 

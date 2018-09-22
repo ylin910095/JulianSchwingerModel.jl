@@ -15,7 +15,7 @@ function cg_Q(lattice::Lattice, mass::Float64, x0::Field, source::Field)
     y = unravel(source)
     x0 = unravel(x0)
     Q = gamma5_Dslash_linearmap(lattice, mass)
-    cg!(x0, Q, y; tol=1e-8, verbose=false)
+    cg!(x0, Q, y; tol=1e-16, verbose=false)
     return ravel(x0)
 end
 

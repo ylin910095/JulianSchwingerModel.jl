@@ -19,7 +19,7 @@ function dSG1(i::Int64, lattice::Lattice)
     return - lattice.beta * (
            sin(lattice.anglex[lattice.downt[i]] + 
                lattice.anglet[lattice.rightx[lattice.downt[i]]] -
-               lattice.anglex[i] - lattice.anglet[lattice.downt[i]]) +
+               lattice.anglex[i] - lattice.anglet[lattice.downt[i]]) -
            sin(lattice.anglex[i] + lattice.anglet[lattice.rightx[i]] -
                lattice.anglex[lattice.upt[i]] - lattice.anglet[i])
             )
@@ -48,51 +48,44 @@ function pforce_common(pf::PseudoFermion, lattice::Lattice)
     # First invert pf
     x0 = Field(undef, lattice.ntot) # Starting guess
     zero!(x0) # Zero initial guess
-    Dm1_gamma5_psi = cg_Q(lattice, lattice.mass, x0, pf.Dm1pf.s)
-    gamma5mul!(Dm1_gamma5_psi)
-    return Dm1_gamma5_psi
+    psi = cg_Q(lattice, lattice.mass, x0, gamma5mul(pf.pf.s))
+    Dm1_gamma5_psi = cg_Q(lattice, lattice.mass, x0, psi)
+    return gamma5mul(Dm1_gamma5_psi), psi
 end
 
 """
 Fermion forces at site i, mu=1. Using equation (2.81) of Luscher 2010, ``Computational 
 Strategies in Lattice QCD``. lhs is the output from pforce_common.
 """
-function pforce1(i::Int64, pf::PseudoFermion, lattice::Lattice, lhs::Field)
-
-    # Calculate the factor on the right-hand-side of the dot product
-    # psi = D^{-1}\phi where \phi is pf field.
-    psi = pf.Dm1pf.s
-
+function pforce1(i::Int64, pf::PseudoFermion, lattice::Lattice,  psi::Field,
+                 lhs::Field)
     # Apply the variant of S_pf with respect of gaugel link
     left1_i = lattice.leftx[i]
     right1_i = lattice.rightx[i]
-    link1 =lattice.linkx[i]
+    link1 = lattice.linkx[i]
 
     # Implementing periodic bc in space
     # First term in dot product
-    dotx = 0.5*(
-            conj(lhs[right1_i][1]) * conj(link1)*(psi[i][1] + psi[i][2]) - 
+    dotx = 0.5 * (
+            conj(lhs[right1_i][1]) * conj(link1) * (psi[i][1] + psi[i][2]) - 
             conj(lhs[i][1]) * link1 * (psi[right1_i][1] - psi[right1_i][2]) 
             )
     # Second term in dot product
     dott = 0.5 * (
-            conj(lhs[right1_i][2]) * conj(link1)*(psi[i][1] + psi[i][2]) - 
+            conj(lhs[right1_i][2]) * conj(link1) * (psi[i][1] + psi[i][2]) - 
             conj(lhs[i][2]) * link1 * (-psi[right1_i][1] + psi[right1_i][2]) 
             )
-    return -2*real(dotx + dott)
+    return -2*real(im*(dotx + dott))
 end
 
 """
 Fermion forces at site i, mu=2. Using equation (2.81) of Luscher 2010, ``Computational 
 Strategies in Lattice QCD``. It is important to have boundary condition consistent with
-the Dslash operator. lhs is the output from pforce_common.
+the Dslash operator. lhs is the output from pforce_common. 
+psi = D^{-1}phi where phi is pf field.
 """
-function pforce2(i::Int64, pf::PseudoFermion, lattice::Lattice, lhs::Field)
-
-    # Calculate the factor on the right-hand-side of the dot product
-    # psi = D^{-1}\phi where \phi is pf field.
-    psi = pf.Dm1pf.s
-
+function pforce2(i::Int64, pf::PseudoFermion, lattice::Lattice, psi::Field,
+                 lhs::Field)
     # Apply the variant of S_pf with respect of gaugel link
     right2_i = lattice.upt[i]
     # Implementing antiperiodic bc in time
@@ -105,16 +98,15 @@ function pforce2(i::Int64, pf::PseudoFermion, lattice::Lattice, lhs::Field)
     end
     link2 = lattice.linkt[i]
 
-    # Implementing periodic bc in space
     # First term in dot product
-    dotx = 0.5*(
+    dotx = 0.5 * (
             conj(lhs_right2_i[1]) * conj(link2)*(psi[i][1] - im * psi[i][2]) - 
-            conj(lhs[i][1]) * link2 *(psi[right2_i][1] + im * psi_right2_i[2]) 
+            conj(lhs[i][1]) * link2 *(psi_right2_i[1] + im * psi_right2_i[2]) 
             )
     # Second term in dot product
     dott = 0.5 * (
             conj(lhs_right2_i[2]) * conj(link2)*(im * psi[i][1] + psi[i][2]) - 
-            conj(lhs[i][2]) * link2 *(-im * psi[right2_i][1] + psi_right2_i[2]) 
+            conj(lhs[i][2]) * link2 *(-im * psi_right2_i[1] + psi_right2_i[2]) 
             )
-    return -2*real(dotx + dott)
+    return -2*real(im*(dotx + dott))
 end
