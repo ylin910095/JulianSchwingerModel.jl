@@ -59,11 +59,12 @@ function HMCWilson_update!(lattice::Lattice, hmcparam::HMCParam)
     # Accept-Reject
     hamnew = evalham(p, pf, lattice.quenched, lattice)
     deltaham = hamnew - hamold
+    println("dH = $deltaham")
     if rand01() < min(1, exp(-deltaham))
         accp = 1 
     else
         # Revert back lattice field
-        lattice = latticeold
+        deepcopy!(lattice, latticeold)
         accp = 0
     end
     return accp
@@ -74,15 +75,16 @@ function test_HMC()
     # Lattice param
     nx = 32
     nt = 32
-    mass = 0.06
-    beta = 5.0
-    quenched = false
+    kappa = 0.26 # Hopping parameter
+    mass = (kappa^-1 - 4)/2
+    beta = 2.5
+    quenched = true
 
     # HMC param
-    tau = 0.1
-    integrationsteps = 20
+    tau = 2
+    integrationsteps = 400
     hmciter = 1000
-    thermalizationiter = 1
+    thermalizationiter = 100
     lattice = Lattice(nx, nt, mass, beta, quenched)
     hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
     
@@ -98,15 +100,19 @@ function test_HMC()
     end
     # Actual measurements
     plaqsum = 0.0
+    accptot_hmc = 0
     for ihmciter in 1:hmcparam.niter
         println("Measurement steps: $ihmciter/$(hmcparam.niter)")
         accp = HMCWilson_update!(lattice, hmcparam)
         accptot += accp
+        accptot_hmc += accp
         accprate = accptot/(ihmciter + hmcparam.thermalizationiter)
-        plaq = measure_wilsonloop(lattice)
-        plaqsum += plaq
-        println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
-        println("Avg plaq: $(plaqsum/ihmciter)")
+        if accp == 1
+            plaq = measure_wilsonloop(lattice)
+            plaqsum += plaq
+            println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
+            println("Avg plaq: $(plaqsum/accptot_hmc)")
+        end
     end
 end
 test_HMC()

@@ -15,7 +15,7 @@ antiperiodic in timelike direction (t-direction or 2 direction)
 function gamma5_Dslash_wilson(field_in::Field, 
                               lattice::Lattice,
                               mass::Float64)
-    factor = 2 + mass
+    factor = 2 + mass 
     field_out = Field(undef, lattice.ntot)
     zero!(field_out)
     for i in 1:lattice.ntot
