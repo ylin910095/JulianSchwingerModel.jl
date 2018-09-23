@@ -91,7 +91,8 @@ function load_lattice(filename::String)
     for i in 1:ntot
         anglet[i] = read(buf, Float64)
     end
-
+    
+    close(io)
     return Lattice(nx, nt, mass, beta, quenched, anglex, anglet)
 end
 
