@@ -6,9 +6,8 @@ include("./randlattice.jl")
 mutable struct HMCParam
     tau::Float64 # Total HMC evolution time
     nintsteps::Int64 # Integration timesteps
-    niters::Int64 # Number of steps for HMC
-    thermalization::Int64 # Number of thermalization steps
-    quenched::Bool # Quenched or not
+    niter::Int64 # Number of steps for HMC
+    thermalizationiter::Int64 # Number of thermalization steps
 end
 
 mutable struct HMCMom

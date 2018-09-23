@@ -5,6 +5,7 @@ mutable struct Lattice
     nt::Int64
     mass::Float64 # Sea quarks masses
     beta::Float64
+    quenched::Bool
 
     # Initilize derived variables
     ntot::Int64
@@ -22,7 +23,7 @@ mutable struct Lattice
     linkt::Array{ComplexF64, 2}
 
     # Inner constructor method to initilize structure
-    function Lattice(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
+    function Lattice(nx::Int64, nt::Int64, mass::Float64, beta::Float64, quenched::Bool)
         ntot = nx * nt
         leftx  = Array{Int64, 2}(undef, nx, nt)
         rightx = Array{Int64, 2}(undef, nx, nt)
@@ -72,16 +73,16 @@ mutable struct Lattice
         # The ordering here corresponds to the ordering of definition 
         # at the beginning of struct. If wrongly ordered, it will raise
         # errors
-        new(nx, nt, mass, beta,
+        new(nx, nt, mass, beta, quenched,
             ntot, lin_indx, leftx, rightx, upt, downt, corr_indx, 
             anglex, anglet, linkx, linkt)
     end
 end
 
-function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64)
+function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64, quenched::Bool)
 
     # Testing for correctness of finding neighbors
-    @time lattice = Lattice(nx, nt, mass, beta)
+    @time lattice = Lattice(nx, nt, mass, beta, quenched)
     println("=======================================================================")
     println("=====                        Lattice Setup                        =====")
     println("=======================================================================")

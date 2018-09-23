@@ -5,6 +5,7 @@ include("./solvers.jl")
 include("./randlattice.jl")
 include("./leapfrog.jl")
 include("./hmc_types.jl")
+include("./measurements.jl")
 
 """
 Calculate Hamiltonian
@@ -38,44 +39,74 @@ end
 
 """
 Perform hybrid monte-carlo update to lattice using hmcparam parameters
+hamold is the hamiltonian of input lattice configuration. If hamold == nothing,
+it will compute the old hamiltonian before integration.
+
+Return acc::Bool for acceptance and the new hamiltonian (equal to hamold if accp == false)
 """
-function HMCWilson_update(lattice::Lattice, hmcparam::HMCParam)
-    
-    acceptno = 0
-    for ihmcstep in 1:hmcparam.niters 
-        println("--> HMC Steps: $ihmcstep/$(hmcparam.niters)")
+function HMCWilson_update!(lattice::Lattice, hmcparam::HMCParam)
+    # Generate random PseudoFermion. If quenched, it will not be used
+    pf = PseudoFermion(lattice, gamma5_Dslash_wilson)
+    p = HMCMom(lattice)
 
-        # Generate random PseudoFermion. If quenched, it will not be used
-        pf = PseudoFermion(lattice, gamma5_Dslash_wilson)
-        p = HMCMom(lattice)
-        # Before integration, save the old hamiltonian for accept-reject step
-        hamold = evalham(p, pf, hmcparam.quenched, lattice)
+    hamold = evalham(p, pf, lattice.quenched, lattice)
 
-        # Leapfrog integration
-        dtau = hmcparam.tau / hmcparam.nintsteps
-        latticeold = deepcopy(lattice)
-        leapfrog!(p, pf, hmcparam.nintsteps, dtau, hmcparam.quenched, lattice)
+    # Leapfrog integration
+    dtau = hmcparam.tau / hmcparam.nintsteps
+    latticeold = deepcopy(lattice)
+    leapfrog!(p, pf, hmcparam.nintsteps, dtau, lattice.quenched, lattice)
 
-        # Accept-Reject
-        hamnew = evalham(p, pf, hmcparam.quenched, lattice)
-        deltaham = hamnew - hamold
-        if rand01() < min(1, exp(-deltaham))
-            acceptno += 1
-        else
-            # Revert back lattice field
-            lattice = latticeold
-        end
-        accptrate = acceptno / ihmcstep
-        println()
-        println("Accept rates: $accptrate; Delta Hamiltonian : $deltaham")
-        println()
+    # Accept-Reject
+    hamnew = evalham(p, pf, lattice.quenched, lattice)
+    deltaham = hamnew - hamold
+    if rand01() < min(1, exp(-deltaham))
+        accp = 1 
+    else
+        # Revert back lattice field
+        lattice = latticeold
+        accp = 0
     end
+    return accp
 end
 
 
 function test_HMC()
-    lattice = Lattice(32, 32, -0.06, 1.0)
-    hmcparam = HMCParam(0.1, 10, 100, 100, false)
-    HMCWilson_update(lattice, hmcparam)
+    # Lattice param
+    nx = 32
+    nt = 32
+    mass = 0.06
+    beta = 5.0
+    quenched = false
+
+    # HMC param
+    tau = 0.1
+    integrationsteps = 20
+    hmciter = 1000
+    thermalizationiter = 1
+    lattice = Lattice(nx, nt, mass, beta, quenched)
+    hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
+    
+    accptot = 0
+    # Thermalization
+    for ithiter in 1:hmcparam.thermalizationiter
+        println("Thermalization steps: $ithiter/$(hmcparam.thermalizationiter)")
+        accp = HMCWilson_update!(lattice, hmcparam)
+        accptot += accp
+        accprate = accptot/ithiter
+        plaq = measure_wilsonloop(lattice)
+        println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
+    end
+    # Actual measurements
+    plaqsum = 0.0
+    for ihmciter in 1:hmcparam.niter
+        println("Measurement steps: $ihmciter/$(hmcparam.niter)")
+        accp = HMCWilson_update!(lattice, hmcparam)
+        accptot += accp
+        accprate = accptot/(ihmciter + hmcparam.thermalizationiter)
+        plaq = measure_wilsonloop(lattice)
+        plaqsum += plaq
+        println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
+        println("Avg plaq: $(plaqsum/ihmciter)")
+    end
 end
 test_HMC()

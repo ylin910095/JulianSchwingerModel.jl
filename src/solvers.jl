@@ -24,7 +24,8 @@ function test_cg()
     nt = 3
     mass = 0.1
     beta = 2.0
-    lattice = Lattice(nx, nt, mass, beta)
+    quenched = false
+    lattice = Lattice(nx, nt, mass, beta, quenched)
     source = Spinor(lattice.ntot)
     x0 = Spinor(lattice.ntot)
     # Random source
