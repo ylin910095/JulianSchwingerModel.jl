@@ -1,7 +1,7 @@
 using Random
 
 """
-Set seed for all random number generator 
+Set seed for all random number generators
 """
 # Set the seeds for all prng generation
 if ((@isdefined rngseed) && (@isdefined rng)) == false
