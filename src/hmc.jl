@@ -6,6 +6,7 @@ include("./randlattice.jl")
 include("./leapfrog.jl")
 include("./hmc_types.jl")
 include("./measurements.jl")
+include("./io.jl")
 
 """
 Calculate Hamiltonian
@@ -81,10 +82,10 @@ function test_HMC()
     quenched = true
 
     # HMC param
-    tau = 2
-    integrationsteps = 400
-    hmciter = 1000
-    thermalizationiter = 100
+    tau = 1
+    integrationsteps = 200
+    hmciter = 10000
+    thermalizationiter = 1000
     lattice = Lattice(nx, nt, mass, beta, quenched)
     hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
     
@@ -115,4 +116,4 @@ function test_HMC()
         end
     end
 end
-test_HMC()
+#test_HMC()
