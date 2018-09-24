@@ -42,6 +42,7 @@ function generating_gauge()
         accprate = accptot/ithiter
         plaq = measure_wilsonloop(lattice)
         println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
+        flush(stdout)
     end
     # Actual measurements
     plaqsum = 0.0
@@ -49,6 +50,7 @@ function generating_gauge()
     for ihmciter in 1:hmcparam.niter
         println("Measurement steps: $ihmciter/$(hmcparam.niter)")
         accp = HMCWilson_update!(lattice, hmcparam)
+        flush(stdout)
         accptot += accp
         accptot_hmc += accp
         accprate = accptot/(ihmciter + hmcparam.thermalizationiter)
