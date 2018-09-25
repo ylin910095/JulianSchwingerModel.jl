@@ -1,3 +1,10 @@
+"""
+Linear index (Coulumn-major) to tuple of coordinate in (x,t)
+"""
+function lin2corr(i::Int64)
+    return ((i-1)%nx + 1, floor((i-1)/nx) + 1)
+end
+
 # Strcuture of Arrays
 mutable struct Lattice
     # Inputs
@@ -62,8 +69,7 @@ mutable struct Lattice
             if downt[i] < 1
                 downt[i] += ntot
             end
-            corr_indx[i] = ((i-1)%nx + 1, 
-                            floor((i-1)/nx) + 1)
+            corr_indx[i] = lin2corr
 
             # Initilize gauge links
             if anglex0 != nothing
