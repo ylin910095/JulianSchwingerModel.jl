@@ -118,12 +118,13 @@ function gamma5_Dslash_linearmap(lattice::Lattice, mass::Float64)
 end
 
 function test_gamma5Dslash()
-    nx = 5
-    nt = 20
+    nx = 32
+    nt = 32
     mass = 0.02
     beta = 0.1
+    quenched = false
     outputflag = 0 # 0 for no error, nonzero for more than one errors
-    lattice = Lattice(nx, nt, mass, beta)
+    lattice = Lattice(nx, nt, mass, beta, quenched)
     spinor_in = Spinor(lattice.ntot)
     for i in 1:lattice.ntot
         spinor_in.s[i] = [gauss(), gauss()]

@@ -1,6 +1,8 @@
 using SHA
 include("./lattice.jl")
 include("./spinor.jl")
+include("./randlattice.jl")
+include("./measurements.jl")
 
 function print_lattice(lattice::Lattice)
     println("Lattice Info:")
@@ -43,57 +45,76 @@ function save_lattice(lattice::Lattice, filename::String)
     chsum = checksum_lattice(lattice::Lattice)
 
     # List of metainformation to be saved
-    metalattice = [lattice.nx, lattice.nt, lattice.mass,
-                   lattice.beta, Int64(lattice.quenched), chsum]
+    metalattice = [Int64(lattice.nx), Int64(lattice.nt), 
+                   Float64(lattice.mass),
+                   Float64(lattice.beta), Int64(lattice.quenched), 
+                   Int64(length(chsum)), String(chsum)]
     for (ic, il) in enumerate(metalattice)
         write(io, il)
     end
-    write(io, "\n")
 
     # Now store the gauge angles
     for i in 1:lattice.ntot
-        write(io, lattice.anglet[i])
+        write(io, Float64(lattice.anglet[i]))
     end
-    write(io, "\n")
 
     for i in 1:lattice.ntot
-        write(io, lattice.anglex[i])
+        write(io, Float64(lattice.anglex[i]))
     end
-    write(io, "\n")
 
     close(io)
 end
 
 function load_lattice(filename::String)
-    io = open(filename, "r")
+    buf = open(filename, "r")
 
     # Read line by line
-    allline = readlines(io)
-    buf = IOBuffer(allline[1]) # Put into buffer so it can be parsed
+    #allline = readlines(io, keep=true)
+    #buf = IOBuffer(allline[1]) # Put into buffer so it can be parsed
     #println(length(allline))
-
     nx = read(buf, Int64)
     nt = read(buf, Int64)
     ntot = Int(nx * nt)
     mass = read(buf, Float64)
     beta = read(buf, Float64)
     quenched = Bool(read(buf, Int64))
-    checksum = read(buf, String)
+    lenchsum = read(buf, Int64)
+    checksum = ""
+    for i in 1:lenchsum
+        checksum *= read(buf, Char)
+    end
     anglex = Array{Float64}(undef, ntot)
     anglet = Array{Float64}(undef, ntot)
-
-    # Read gauge angles
-    buf = IOBuffer(allline[2])
-    for i in 1:ntot
-        anglex[i] = read(buf, Float64)
+    """
+    # Now combine all the rest of lines into a single string
+    # This is because \n could appear in binary encoding,
+    # and it will cause errors if we separate them line by line
+    allbinstr = ""
+    for istr in allline[2:end]
+        println(istr)
+        allbinstr *= istr
     end
-    buf = IOBuffer(allline[3])
+    # Read gauge angles
+    buf = IOBuffer(allbinstr)
+    """
     for i in 1:ntot
         anglet[i] = read(buf, Float64)
     end
     
-    close(io)
-    return Lattice(nx, nt, mass, beta, quenched, anglex, anglet)
+    for i in 1:ntot
+        anglex[i] = read(buf, Float64)
+    end
+    close(buf)
+
+    # Finally, check integrity after loading
+    lattice = Lattice(nx, nt, mass, beta, quenched, anglex, anglet)
+    achsum = checksum_lattice(lattice)
+    if achsum != checksum
+        println(achsum)
+        println(checksum)
+        error("Inconsistent checksum after loading")
+    end
+    return lattice
 end
 
 function test_latticeio()
@@ -105,7 +126,11 @@ function test_latticeio()
     beta = 2.5
     quenched = true
     lattice = Lattice(nx, nt, mass, beta, quenched)
-    chsum = checksum_lattice(lattice)
+    # Randomize lattice
+    for i in 1:lattice.ntot
+        lattice.anglex[i] = gauss()
+        lattice.anglet[i] = gauss()
+    end
     save_lattice(lattice, "testsave.txt")
     returned_lattice = load_lattice("testsave.txt")
 
@@ -114,9 +139,6 @@ function test_latticeio()
     println()
     println("After saving")
     print_lattice(returned_lattice)
-    if checksum_lattice(lattice) == checksum_lattice(returned_lattice)
-        println("INTEGRITY CHECKED: Checksums are consistent")
-    else
-        error("INTEGRITY FAILED: Checksums are different")
-    end
+    println("TESTS PASSED: IO ")
 end
+#test_latticeio()
