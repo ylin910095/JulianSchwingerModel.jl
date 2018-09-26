@@ -18,12 +18,13 @@ function pion_correlators()
     # Gauge parameters
     nx = 32
     nt = 32
-    kappa = 0.26 # Hopping parameter = (2m0 + 4r)^{-1} at 2D where r is Wilson parameter
+    # Hopping parameter = (2m0 + 4r)^{-1} at 2D where r is Wilson parameter
+    kappa = 0.26
     mass = (kappa^-1 - 4)/2
     beta = 2.29
     quenched = false
-    t0 = 0 # Location of wallsource
-    saving_directory = "/home/ylin/scratch/schwinger_julia/src/gauge/"
+    t0 = 1 # Location of wallsource
+    saving_directory = "./gauge/"
 
     allgaugeconfig = []
     #  Read all gauge files into a list
@@ -36,26 +37,28 @@ function pion_correlators()
     # Now invert propagators with wall source
     wallsource = Field(undef, Int(nx*nt))
     for i in 1:Int(nx*nt)
-        if lin2corr(i, nx)[2] == t0 
+        if lin2corr(i, nx)[2] == t0
             wallsource[i] = [1.0, 1.0]
         else
             wallsource[i] = [0.0, 0.0]
         end
     end
 
-    pioncorrs = Vector{Vector{ComplexF64}}(undef, length(allgaugeconfig))
+    pioncorrs = Array{Float64}(undef, length(allgaugeconfig), nt)
     for (ic, ifile) in enumerate(allgaugeconfig)
+        anst = zero(Vector{Float64}(undef, nt)) # Should all initilized to zero
         println("Current gauge: $ifile ($ic/$(length(allgaugeconfig)))")
         lattice = load_lattice(saving_directory * ifile)
         # Use wallsource as initial guess too
         gy = cg_Q(lattice, mass, wallsource, wallsource)
-        anst = Vector{ComplexF64}(undef, lattice.nt) # Should all initilized to zero
         for i in 1:lattice.ntot
-            anst[lattice.corr_indx[2]] += (conj(gy[i][1])*gy[i][1] +
-                                           conj(gy[i][2])*gy[i][2])
+            anst[lattice.corr_indx[i][2]] += (conj(gy[i][1])*gy[i][1] +
+                                              conj(gy[i][2])*gy[i][2])
         end
-        pioncorrs[ic] =  anst ./ nx 
+        for it in 1:nt
+            pioncorrs[ic, it] =  real(anst ./ nx)[it]
+        end
     end
-    npzwrite("pion_correlators.npz", ["data" => pioncorrs])
+    npzwrite("pion_correlators.npz", pioncorrs)
 end
 pion_correlators()

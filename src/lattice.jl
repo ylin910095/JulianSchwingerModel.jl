@@ -2,7 +2,8 @@
 Linear index (Coulumn-major) to tuple of coordinate in (x,t)
 """
 function lin2corr(i::Int64, nx::Int64)
-    return ((i-1)%nx + 1, floor((i-1)/nx) + 1)
+    return (Int64((i-1)%nx + 1),
+            Int64(floor((i-1)/nx) + 1))
 end
 
 # Strcuture of Arrays
@@ -52,9 +53,9 @@ mutable struct Lattice
             # Find the closest neighbors and coordinate indices
             lin_indx[i] = i
             if (i-1) % nx != 0
-                leftx[i] = i - 1 
+                leftx[i] = i - 1
             else
-                leftx[i] = i + nx - 1 
+                leftx[i] = i + nx - 1
             end
             if i % nx != 0
                 rightx[i] = i + 1
@@ -64,7 +65,7 @@ mutable struct Lattice
             upt[i] = i + nx
             if upt[i] > ntot
                 upt[i] -= ntot
-            end 
+            end
             downt[i] = i - nx
             if downt[i] < 1
                 downt[i] += ntot
@@ -87,11 +88,11 @@ mutable struct Lattice
             linkx[i] = exp(anglex[i]*im)
             linkt[i] = exp(anglet[i]*im)
         end
-        # The ordering here corresponds to the ordering of definition 
+        # The ordering here corresponds to the ordering of definition
         # at the beginning of struct. If wrongly ordered, it will raise
         # errors
         new(nx, nt, mass, beta, quenched,
-            ntot, lin_indx, leftx, rightx, upt, downt, corr_indx, 
+            ntot, lin_indx, leftx, rightx, upt, downt, corr_indx,
             anglex, anglet, linkx, linkt)
     end
 end

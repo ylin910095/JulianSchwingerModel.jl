@@ -25,10 +25,10 @@ function generating_gauge()
     tau = 1
     integrationsteps = 200
     hmciter = 10000
-    thermalizationiter = 1000
+    thermalizationiter = 10
 
     # Create lattice
-    lattice = Lattice(nx, nt, mass, beta, quenched)
+    lattice = load_lattice("/home/ylin/scratch/schwinger_julia/src/gauge/l3232b2.2900k0.2600seed1234-000224.gauge")
     hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
     saving_prefix = @sprintf "%sl%d%db%.4fk%.4fseed%d-" saving_directory nx nt beta kappa rngseed
     accptot = 0

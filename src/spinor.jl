@@ -1,3 +1,5 @@
+import Base: zero # Imported to be extended for REPL
+
 """
 spinor = Spinor(ntot) will create a two-components spinor of lengt ntot
 that are initilized to zero at all lattice points
@@ -7,6 +9,7 @@ Field = Vector{Vector{ComplexF64}}
 """
 Return field with all zeros. Required for IterativeSolvers
 """
+
 function zero(x::Field)
     ntot = length(x)
     y = Field(undef, ntot)
@@ -17,19 +20,7 @@ function zero(x::Field)
 end
 
 """
-Return vector of complext number with all zeros. Required for IterativeSolvers
-"""
-function zero(x::Vector{ComplexF64})
-    ntot = length(x)
-    y = Vector{ComplexF64}
-    for i in 1:ntot
-        y[i] = 0.0
-    end
-    return y[i]
-end
-
-"""
-Same as zero(x), but zero out the current array 
+Same as zero(x), but zero out the current array
 """
 function zero!(x::Field)
     ntot = length(x)
@@ -67,7 +58,7 @@ function ravel(x::Vector{ComplexF64})
 end
 
 """
-Construct Spinor object. If v is given, it will copy its value 
+Construct Spinor object. If v is given, it will copy its value
 and use it to construct field s
 """
 mutable struct Spinor
