@@ -10,13 +10,14 @@ include("./randlattice.jl")
 Q = gamma5_Dslash_wilson
 Solve Qx = source using conjugate gradient
 return spinor answer
+If a linear operator Q is given, it will use it to solve the system
 """
-function cg_Q(lattice::Lattice, mass::Float64, x0::Field, source::Field)
+function cg_Q(lattice::Lattice, mass::Float64, source::Field,
+              verbose::Bool=false)
     y = unravel(source)
-    x0 = unravel(x0)
     Q = gamma5_Dslash_linearmap(lattice, mass)
-    cg!(x0, Q, y; tol=1e-16, verbose=false)
-    return ravel(x0)
+    sol = cg(Q, y; tol=1e-16, verbose=verbose)
+    return ravel(sol)
 end
 
 function test_cg()
@@ -30,7 +31,7 @@ function test_cg()
     x0 = Spinor(lattice.ntot)
     # Random source
     for i in 1:lattice.ntot
-        source.s[i] = [gauss() + im*gauss(), 
+        source.s[i] = [gauss() + im*gauss(),
                        gauss() + im*gauss()]
     end
     field_out = cg_Q(lattice, mass, x0.s, source.s)

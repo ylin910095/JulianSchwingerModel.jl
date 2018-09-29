@@ -24,12 +24,12 @@ function generating_gauge()
     # HMC parameters
     tau = 1
     integrationsteps = 200
-    hmciter = 10000
     thermalizationiter = 10
+    measurements = 1000
 
     # Create lattice
     lattice = load_lattice("/home/ylin/scratch/schwinger_julia/src/gauge/l3232b2.2900k0.2600seed1234-000224.gauge")
-    hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
+    hmcparam = HMCParam(tau, integrationsteps, thermalizationiter, measurements)
     saving_prefix = @sprintf "%sl%d%db%.4fk%.4fseed%d-" saving_directory nx nt beta kappa rngseed
     accptot = 0
 
@@ -46,24 +46,29 @@ function generating_gauge()
     end
     # Actual measurements
     plaqsum = 0.0
-    accptot_hmc = 0
-    for ihmciter in 1:hmcparam.niter
-        println("Measurement steps: $ihmciter/$(hmcparam.niter)")
+    accptot_meas = 0
+    nomeas = 0 # Number of accepted measurements
+    ihmciter = 0 # Total number of hmc iterations
+    while nomeas < hmcparam.measurements
+        ihmciter += 1
+        println("Measurement steps: (hmciters: $ihmciter, measurements: $nomeas/$(
+                 hmcparam.measurements))")
         accp = HMCWilson_update!(lattice, hmcparam)
         flush(stdout)
         accptot += accp
-        accptot_hmc += accp
+        accptot_meas += accp
         accprate = accptot/(ihmciter + hmcparam.thermalizationiter)
 
         if accp == 1
             # Measure plaquette
+            nomeas += 1
             plaq = measure_wilsonloop(lattice)
             plaqsum += plaq
             println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
-            println("Avg plaq: $(plaqsum/accptot_hmc)")
+            println("Avg plaq: $(plaqsum/accptot_meas)")
 
             # Save lattice
-            paddedsuffix = lpad(accptot_hmc, 6 ,"0")
+            paddedsuffix = lpad(accptot_meas, 6 ,"0")
             savename = @sprintf "%s%s.gauge" saving_prefix paddedsuffix
             save_lattice(lattice, savename)
             println("Saved gauge file: $savename")

@@ -9,15 +9,14 @@ include("./randlattice.jl")
 """
 gamma5*Dslash operator
 Gauge fields have periodic boundary condition in all directions, whereas
-fermions are periodic in spacelike direction (x-direction or 1 direction) and 
+fermions are periodic in spacelike direction (x-direction or 1 direction) and
 antiperiodic in timelike direction (t-direction or 2 direction)
 """
-function gamma5_Dslash_wilson(field_in::Field, 
+function gamma5_Dslash_wilson(field_in::Field,
                               lattice::Lattice,
                               mass::Float64)
-    factor = 2 + mass 
+    factor = 2 + mass
     field_out = Field(undef, lattice.ntot)
-    zero!(field_out)
     for i in 1:lattice.ntot
         left1_i = lattice.leftx[i]
         left2_i = lattice.downt[i]
@@ -27,7 +26,6 @@ function gamma5_Dslash_wilson(field_in::Field,
         # Implementing periodic bc in space
         in_right1_i = field_in[right1_i]
         in_left1_i = field_in[left1_i]
-        
         # Implementing antiperiodic bc in time
         if lattice.corr_indx[right2_i][2] == 1
             in_right2_i = -field_in[right2_i]
@@ -39,37 +37,83 @@ function gamma5_Dslash_wilson(field_in::Field,
         else
             in_left2_i = field_in[left2_i]
         end
-        
+
         link1 = lattice.linkx
         link2 = lattice.linkt
         cconj_link1_left1_i = conj(link1[left1_i])
         cconj_link2_left2_i = conj(link2[left2_i])
-        
-        # First spinor component
-        field_out[i][1] = factor * field_in[i][1] - 0.5*(
+
+        a1 = factor * field_in[i][1] - 0.5*(
                 link1[i]*(in_right1_i[1] - in_right1_i[2]) +
                 cconj_link1_left1_i * (in_left1_i[1] + in_left1_i[2])  +
                 link2[i] * (in_right2_i[1] + im * in_right2_i[2]) +
                 cconj_link2_left2_i * (in_left2_i[1] - im * in_left2_i[2])
                 )
-        # Second spinor component
-        field_out[i][2] = -factor * field_in[i][2] - 0.5*(
+        a2 =  -factor * field_in[i][2] - 0.5*(
             link1[i] * (in_right1_i[1] - in_right1_i[2]) -
             cconj_link1_left1_i * (in_left1_i[1]  + in_left1_i[2])  +
             link2[i] * (im * in_right2_i[1] - in_right2_i[2]) -
             cconj_link2_left2_i * (im * in_left2_i[1]  + in_left2_i[2])
             )
+        field_out[i] = [a1, a2]
     end
     return field_out
 end
 
+function gamma5_Dslash_wilson!(field_out::Field,
+                               field_in::Field,
+                               lattice::Lattice,
+                               mass::Float64)
+    factor = 2 + mass
+    for i in 1:lattice.ntot
+        left1_i = lattice.leftx[i]
+        left2_i = lattice.downt[i]
+        right1_i = lattice.rightx[i]
+        right2_i = lattice.upt[i]
+
+        # Implementing periodic bc in space
+        in_right1_i = field_in[right1_i]
+        in_left1_i = field_in[left1_i]
+        # Implementing antiperiodic bc in time
+        if lattice.corr_indx[right2_i][2] == 1
+            in_right2_i = -field_in[right2_i]
+        else
+            in_right2_i = field_in[right2_i]
+        end
+        if lattice.corr_indx[left2_i][2] == lattice.nt
+            in_left2_i = -field_in[left2_i]
+        else
+            in_left2_i = field_in[left2_i]
+        end
+
+        link1 = lattice.linkx
+        link2 = lattice.linkt
+        cconj_link1_left1_i = conj(link1[left1_i])
+        cconj_link2_left2_i = conj(link2[left2_i])
+
+        a1 = factor * field_in[i][1] - 0.5*(
+                link1[i]*(in_right1_i[1] - in_right1_i[2]) +
+                cconj_link1_left1_i * (in_left1_i[1] + in_left1_i[2])  +
+                link2[i] * (in_right2_i[1] + im * in_right2_i[2]) +
+                cconj_link2_left2_i * (in_left2_i[1] - im * in_left2_i[2])
+                )
+        a2 =  -factor * field_in[i][2] - 0.5*(
+            link1[i] * (in_right1_i[1] - in_right1_i[2]) -
+            cconj_link1_left1_i * (in_left1_i[1]  + in_left1_i[2])  +
+            link2[i] * (im * in_right2_i[1] - in_right2_i[2]) -
+            cconj_link2_left2_i * (im * in_left2_i[1]  + in_left2_i[2])
+            )
+        field_out[i] = [a1, a2]
+    end
+end
+
 """
-Another implementation of gamma5_Dslash but using 
+Another implementation of gamma5_Dslash but using
 matrix multiplication instead of explicit assignment
 to real and imaginary part.
 This is slow and should not be used in production.
 """
-function gamma5_Dslash_wilson_matrix(field_in::Field, 
+function gamma5_Dslash_wilson_matrix(field_in::Field,
                                      lattice::Lattice,
                                      mass::Float64)
     field_out = Field(undef, lattice.ntot)
@@ -99,7 +143,7 @@ function gamma5_Dslash_wilson_matrix(field_in::Field,
         field_out[i] = gamma5 * (factor .* field_in[i] - 0.5*(
             link1[i] .* (I - gamma1) * in_right1_i +
             conj(link1[left1_i]) .* (I + gamma1) * in_left1_i +
-            link2[i] .* (I - gamma2) * in_right2_i + 
+            link2[i] .* (I - gamma2) * in_right2_i +
             conj(link2[left2_i]) .* (I + gamma2) * in_left2_i
             ))
     end
@@ -118,8 +162,8 @@ function gamma5_Dslash_linearmap(lattice::Lattice, mass::Float64)
 end
 
 function test_gamma5Dslash()
-    nx = 32
-    nt = 32
+    nx = 5
+    nt = 5
     mass = 0.02
     beta = 0.1
     quenched = false
@@ -169,7 +213,7 @@ function test_gamma5Dslash()
             end
         end
     end
-    
+
     hermiflag = 0
     for i in 1:lattice.ntot
         for j in 1:lattice.ntot
@@ -189,7 +233,7 @@ function test_gamma5Dslash()
     end
     outputflag += hermiflag
 
-    
+
     # Test linearmap construction of gamma5_Dslash_wilson
     g5D = gamma5_Dslash_linearmap(lattice, mass)
     spinor_in = Spinor(lattice.ntot)
@@ -213,7 +257,7 @@ function test_gamma5Dslash()
         println("CORRECTNESS FAILED: gamma5_Dslash_linearmap")
         outputflag += 1
     end
-    
+
     if outputflag == 0
         println("ALL TESTS PASSED")
     else

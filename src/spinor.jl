@@ -16,7 +16,7 @@ function zero(x::Field)
     for i in 1:ntot
         y[i] = [0.0, 0.0]
     end
-    return y[i]
+    return y
 end
 
 """

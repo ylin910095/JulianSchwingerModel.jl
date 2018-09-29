@@ -5,11 +5,11 @@ include("./hmc_types.jl")
 include("./hmc_wilson_forces.jl")
 
 
-function leapfrog!(p::HMCMom, pf::PseudoFermion, nsteps::Int64, 
+function leapfrog!(p::HMCMom, pf::PseudoFermion, nsteps::Int64,
                   dtau::Float64, quenched::Bool, lattice::Lattice)
     updatemom!(p, pf, dtau./2, quenched, lattice)
     for istep in 1:nsteps
-        println("Leapfrog steps: $istep/$nsteps")
+        #println("Leapfrog steps: $istep/$nsteps")
         updategauge!(p, dtau, lattice)
         updatemom!(p, pf, dtau, quenched, lattice)
     end

@@ -6,11 +6,18 @@ include("./measurements.jl")
 
 function print_lattice(lattice::Lattice)
     println("Lattice Info:")
-    println("-------------------------------")
+    print_sep()
     println("nx:         $(lattice.nx)")
     println("nt:         $(lattice.nt)")
     println("mass:       $(lattice.mass)")
     println("quenched:   $(lattice.quenched)")
+    print_sep()
+end
+
+"""
+Print a line of dashes
+"""
+function print_sep()
     println("-------------------------------")
 end
 
@@ -39,15 +46,15 @@ Don't want to depend on other packages that might break in the future
 Julia update. Save all information in lattice to filename
 """
 function save_lattice(lattice::Lattice, filename::String)
-    io = open(filename, "w") 
+    io = open(filename, "w")
 
-    # Calculate checksum for the lattice 
+    # Calculate checksum for the lattice
     chsum = checksum_lattice(lattice::Lattice)
 
     # List of metainformation to be saved
-    metalattice = [Int64(lattice.nx), Int64(lattice.nt), 
+    metalattice = [Int64(lattice.nx), Int64(lattice.nt),
                    Float64(lattice.mass),
-                   Float64(lattice.beta), Int64(lattice.quenched), 
+                   Float64(lattice.beta), Int64(lattice.quenched),
                    Int64(length(chsum)), String(chsum)]
     for (ic, il) in enumerate(metalattice)
         write(io, il)
@@ -100,7 +107,7 @@ function load_lattice(filename::String)
     for i in 1:ntot
         anglet[i] = read(buf, Float64)
     end
-    
+
     for i in 1:ntot
         anglex[i] = read(buf, Float64)
     end
