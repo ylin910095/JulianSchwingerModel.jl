@@ -129,6 +129,157 @@ void gamma5_Dslash_wilson(spinor *out, spinor *in, int NTOT, double mass,
   return;
 }
 
+void set_zero(spinor *P, int NTOT)
+{
+    int i;
+    for(i=0; i<NTOT; i++){
+        P[i].s1 = 0.0 + I*0.0;
+        P[i].s2 = 0.0 + I*0.0;
+    };
+}
+void assign(spinor *R, spinor *S, int NTOT)
+{
+    int ix;
+    spinor *r,*s;
+
+    for (ix=0;ix<NTOT;ix++){
+    r=(spinor *) R + ix;
+    s=(spinor *) S + ix;
+
+    (*r).s1=(*s).s1;
+
+    (*r).s2=(*s).s2;
+  }
+}
+double square_norm(spinor *S, int NTOT)
+{
+  int ix;
+  static double ds;
+  spinor *s;
+  ds=0.0;
+  for (ix=0;ix<NTOT;ix++)
+  {
+    s=(spinor *)S + ix;
+    ds+=creal(conj((*s).s1)*(*s).s1+conj((*s).s2)*(*s).s2);
+  }
+  return ds;
+}
+double scalar_prod_r(spinor *S, spinor *R, int NTOT)
+{
+  int ix;
+  static double ds;
+  spinor *s,*r;
+  
+  /* Real Part */
+
+  ds=0.0;
+  
+  for (ix=0;ix<NTOT;ix++){
+    s=(spinor *) S + ix;
+    r=(spinor *) R + ix;
+    
+    //ds+=conj((*s).s1)*(*r).s1+conj((*s).s2)*(*r).s2;
+    ds+=creal(conj((*s).s1)*(*r).s1+conj((*s).s2)*(*r).s2);
+  }
+
+  return(ds);
+}
+void assign_add_mul_r(spinor *P, spinor *Q, double c, int NTOT)
+{
+  int ix;
+  static double fact;
+
+  fact=c;
+   
+  for (ix=0;ix<NTOT;ix++){
+
+    P[ix].s1+=fact*Q[ix].s1;
+    P[ix].s2+=fact*Q[ix].s2;
+  }
+}
+void assign_mul_add_r(spinor *R, spinor *S, double c, int NTOT)
+{
+  int ix;
+  static double fact;
+  spinor *r,*s;
+  
+  fact=c;
+  
+  for (ix=0;ix<NTOT;ix++){
+    r=(spinor *) R + ix;
+    s=(spinor *) S + ix;
+    
+    (*r).s1=fact*(*r).s1+(*s).s1;
+    (*r).s2=fact*(*r).s2+(*s).s2;
+  }
+}
+#if 0
+/* Solves the equation f*P = Q where f = gamma5_Dslash_wilson here */
+int cg_Q(spinor *P, spinor *Q, int max_iter, double eps_sq, int NTOT, 
+         double mass, int *left1, int *right1, int *left2, int *right2,
+         complex double *link1, complex double *link2){
+
+    double normsq, pro, err, alpha_cg, beta_cg;
+    int iteration;
+    spinor r[NTOT], p[NTOT];
+    spinor x[NTOT], q2p[NTOT];
+    spinor tmp1[NTOT];
+
+    /* Initial guess for the solution - zero works well here */ 
+    set_zero(x, NTOT);
+
+    /* initialize residue r and search vector p */
+    assign(r, Q, NTOT); /* r = Q - f*x, x=0 */
+    assign(p, r, NTOT);
+    normsq = square_norm(r, NTOT);
+    
+    double max_rel_err = eps_sq * square_norm(Q, NTOT);
+
+    /* main loop */
+    printf("\n\n Starting CG iterations...\n");
+    for(iteration=0; iteration<max_iter; iteration++){
+        gamma5_Dslash_wilson(q2p, p, NTOT, mass, left1, right1, left2,
+                             right2, link1, link2);
+        pro = scalar_prod_r(p, q2p, NTOT);
+        /*  Compute alpha_cg(i+1)   */
+        alpha_cg = normsq/pro;
+        /*  Compute x_(i+1) = x_i + alpha_cg(i+1) p_i    */
+        assign_add_mul_r(x, p,  alpha_cg, NTOT);
+        /*  Compute r_(i+1) = r_i - alpha_cg(i+1) Q2p_i   */
+        assign_add_mul_r(r, q2p, -alpha_cg, NTOT);
+        /* Check whether the precision is reached ... */
+        err=square_norm(r, NTOT);
+        printf("\t CG iteration %i, |r|^2 = %2.2E\n", iteration, err);
+        if(err <= max_rel_err)
+        {
+        printf("Required precision reached, stopping CG iterations...\n\n");
+        assign(P, x, NTOT);
+        return(iteration);
+    };
+        
+    /* Compute beta_cg(i+1) */
+    beta_cg = err/normsq;
+    /* Compute p_(i+1) = r_i+1 + beta_(i+1) p_i     */
+    assign_mul_add_r(p, r, beta_cg, NTOT);
+    normsq = err;
+    }
+    fprintf(stderr, "WARNING: CG didn't converge after %d iterations!\n", max_iter);
+    return (-1);
+}
+#endif
+
+void print_sep(){
+    printf("----------------------------------\n");
+}
+void print_lattice(int NX, int NT, double mass){
+    print_sep();
+    printf("Lattice Info:\n");
+    printf("nx:         %d\n", NX);
+    printf("nt:         %d\n", NT);
+    printf("mass:       %.4f\n", mass);
+    print_sep();
+}
+
 
 int main(){
     const int NX = 32;
@@ -160,6 +311,8 @@ int main(){
         field_out[i].s2 = gauss() + I*gauss();
     }
     /* Main testing loop */
+    print_lattice(NX, NT, mass);
+    printf("Benchmark: gamma5_Dslash_wilson\n");
     double t;
     t = clock_now();
     for(i=0; i<bmiter; i++){
@@ -169,4 +322,20 @@ int main(){
     }
     t = clock_now() - t;
     printf("--> Total excution time (%d iterations): %.8f seconds\n", bmiter, t);
+    print_sep();
+    printf("Benchmark: cg_Q\n");
+    int max_iter = 1e5;
+    double eps_sq = 1e-16;
+
+    /* Make some source at t0 = 0 */
+    spinor wallsource[NTOT];
+    int t0 = 0;
+    for(i=0; i<NTOT; i++){
+        wallsource[i].s1;
+    }
+    /* not yet implemented
+    cg_Q(P, Q, max_iter, eps_sq, NTOT, 
+         mass, leftx, rightx, downt, upt,
+         linkx, linkt);
+    */
 }

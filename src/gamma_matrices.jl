@@ -20,23 +20,30 @@ end
 Left multiplication of gamma5
 """
 function gamma5mul(field_in::Field)
-    lin = length(field_in)
-    field_out = Field(undef, lin)
-    for i in 1:lin
-        field_out[i] = gamma5 * field_in[i]
-    end
-    return field_out
+    y = deepcopy(field_in)
+    gamma5mul!(y)
+    return y
 end
 
-"""
-Right multiplication of gamma5
-"""
+function gamma5mul!(ffield_in::FlatField)
+    for i in 1:Int(length(ffield_in)/2)
+        ffield_in[dirac_comp1(i)] = gamma5[1, 1] * ffield_in[dirac_comp1(i)] +
+                                    gamma5[1, 2] * ffield_in[dirac_comp2(i)]
+        ffield_in[dirac_comp2(i)] = gamma5[2, 1] * ffield_in[dirac_comp1(i)] +
+                                    gamma5[2, 2] * ffield_in[dirac_comp2(i)]
+    end
+end
+
+function gamma5mul(ffield_in::FlatField)
+    y = deepcopy(ffield_in)
+    gamma5mul!(y)
+    return y
+end
+
 function mulgamma5(field_in::Field)
     lin = length(field_in)
     field_out = Field(undef, lin)
     for i in 1:lin
-        display(field_in[i])
-        println()
         field_out[i] = field_in[i] * gamma5
     end
 end

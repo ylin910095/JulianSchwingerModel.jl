@@ -1,4 +1,3 @@
-using BenchmarkTools
 
 include("../src/lattice.jl")
 include("../src/dirac.jl")
@@ -23,27 +22,27 @@ function make_bmfields()
     quenched = false
     # Initilize some random lattice and sources for the solver
     lattice = Lattice(nx, nt, mass, beta, quenched)
-    source = Field(undef, lattice.ntot)
-    field_out = Field(undef, lattice.ntot)
+    source = FlatField(undef, 2 * lattice.ntot)
+    ffield_out = zero(FlatField(undef, 2 * lattice.ntot))
     for i in 1:lattice.ntot
         lattice.anglex[i] = rand01() * 2 * pi
         lattice.anglet[i] = rand01() * 2 * pi
         lattice.linkx[i] = exp(lattice.anglex[i])
         lattice.linkt[i] = exp(lattice.anglet[i])
-        source[i] = [gauss() + im * gauss(),
-                     gauss() + im * gauss()]
-        field_out[i] = [0.0 + im*0.0, 0.0 + im*0.0]
+        source[dirac_comp1(i)] = gauss() + im * gauss() 
+        source[dirac_comp2(i)] = gauss() + im * gauss()
     end
-    return lattice, source, field_out
+    return lattice, source, ffield_out
 end
 
-function benchmark_cg()
-    bmiter = 10 # Number of test iterations
-    lattice, source = make_bmfields()
+function benchmark_minres()
+    bmiter = 50 # Number of test iterations
+    lattice, source, ffield_out = make_bmfields()
+    Q = gamma5_Dslash_linearmap(lattice, lattice.mass)
     print_lattice(lattice)
-    println("Benchmark: cg_Q ($bmiter iterations)")
+    println("Benchmark: minres_Q ($bmiter iterations)")
     @time for i in 1:bmiter
-        cg_Q(lattice, lattice.mass, gamma5mul(source), false)
+        ans = minres_Q(Q, lattice, lattice.mass, gamma5mul(source))
     end
     print_sep()
 end
@@ -51,7 +50,7 @@ end
 # Benchmark the speed of Wilson operator of various implementations
 function benchmar_dirac()
     bmiter = 10000 # Number of test iterations
-    lattice, source, field_out = make_bmfields()
+    lattice, source, ffield_out = make_bmfields()
     print_lattice(lattice)
     println("Benchmark: gamma5_Dslash_wilson ($bmiter iterations)")
     @time for i in 1:bmiter
@@ -59,17 +58,17 @@ function benchmar_dirac()
     end
     print_sep()
     println("Benchmark: gamma5_Dslash_linearmap ($bmiter iterations)")
+    A = gamma5_Dslash_linearmap(lattice, lattice.mass)
     @time for i in 1:bmiter
-        A = gamma5_Dslash_linearmap(lattice, lattice.mass)
-        ravel(A * unravel(source))
+        c = A * source
     end
-
+    print_sep()
     println("Benchmark: gamma5_Dslash_wilson! ($bmiter iterations)")
     @time for i in 1:bmiter
-        gamma5_Dslash_wilson(field_out, source, lattice, lattice.mass)
+        gamma5_Dslash_wilson!(ffield_out, source, lattice, lattice.mass)
     end
 
 end
 
-#benchmark_cg()
+#benchmark_minres()
 benchmar_dirac()
