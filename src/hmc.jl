@@ -9,27 +9,26 @@ include("./measurements.jl")
 include("./io.jl")
 
 """
-Calculate Hamiltonian
+Calculate Hamiltonian. Q is returned by gamma5_Dslash_linearmap
 """
-function evalham(p::HMCMom, pf::PseudoFermion, quenched::Bool, lattice::Lattice)
+function evalham(Q::Any, p::HMCMom, pf::PseudoFermion, quenched::Bool,
+                 lattice::Lattice)
     if quenched == false
         # First calculate pf contribution by inversion
-        x0 = Field(undef, lattice.ntot)
-        zero!(x0) # Zero initial guess
-        psi = cg_Q(lattice, lattice.mass, x0, gamma5mul(pf.pf.s)) # D^{-1}phi
+        psi = minres_Q(Q, lattice, lattice.mass, gamma5mul(pf.pf)) # D^{-1}phi
     end
 
     # Sum all parts
-    ham = 0.0 
+    ham = 0.0
     for i in 1:lattice.ntot
         if quenched == false
-            ham += SG(i,lattice) + 0.5 * p.gpx[i]*p.gpx[i] + 
+            ham += SG(i,lattice) + 0.5 * p.gpx[i]*p.gpx[i] +
                                    0.5 * p.gpt[i]*p.gpt[i] +
-                                   conj(psi[i][1]) * psi[i][1] +
-                                   conj(psi[i][2]) * psi[i][2]
+                                   conj(psi[dirac_comp1(i)]) * psi[dirac_comp1(i)] +
+                                   conj(psi[dirac_comp2(i)]) * psi[dirac_comp2(i)]
         else
-            ham += SG(i,lattice) + 0.5 * p.gpx[i]*p.gpx[i] + 
-                                   0.5 * p.gpt[i]*p.gpt[i] 
+            ham += SG(i,lattice) + 0.5 * p.gpx[i]*p.gpx[i] +
+                                   0.5 * p.gpt[i]*p.gpt[i]
         end
     end
     if real(ham) != ham
@@ -47,22 +46,25 @@ Return acc::Bool for acceptance and the new hamiltonian (equal to hamold if accp
 """
 function HMCWilson_update!(lattice::Lattice, hmcparam::HMCParam)
     # Generate random PseudoFermion. If quenched, it will not be used
-    pf = PseudoFermion(lattice, gamma5_Dslash_wilson)
+    pf = PseudoFermion(lattice, gamma5_Dslash_wilson_vector)
     p = HMCMom(lattice)
 
-    hamold = evalham(p, pf, lattice.quenched, lattice)
+    # Generate Q linear operator that will be used throughout
+    Q = gamma5_Dslash_linearmap(lattice, lattice.mass)
+
+    hamold = evalham(Q, p, pf, lattice.quenched, lattice)
 
     # Leapfrog integration
     dtau = hmcparam.tau / hmcparam.nintsteps
     latticeold = deepcopy(lattice)
-    leapfrog!(p, pf, hmcparam.nintsteps, dtau, lattice.quenched, lattice)
+    leapfrog!(Q, p, pf, hmcparam.nintsteps, dtau, lattice.quenched, lattice)
 
     # Accept-Reject
-    hamnew = evalham(p, pf, lattice.quenched, lattice)
+    hamnew = evalham(Q, p, pf, lattice.quenched, lattice)
     deltaham = hamnew - hamold
     println("dH = $deltaham")
     if rand01() < min(1, exp(-deltaham))
-        accp = 1 
+        accp = 1
     else
         # Revert back lattice field
         deepcopy!(lattice, latticeold)
@@ -82,13 +84,13 @@ function test_HMC()
     quenched = true
 
     # HMC param
-    tau = 1
+    tau = 3
     integrationsteps = 200
     hmciter = 10000
     thermalizationiter = 1000
     lattice = Lattice(nx, nt, mass, beta, quenched)
     hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
-    
+
     accptot = 0
     # Thermalization
     for ithiter in 1:hmcparam.thermalizationiter

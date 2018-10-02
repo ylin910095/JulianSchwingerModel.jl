@@ -5,23 +5,23 @@ include("./hmc_types.jl")
 include("./hmc_wilson_forces.jl")
 
 
-function leapfrog!(p::HMCMom, pf::PseudoFermion, nsteps::Int64,
+function leapfrog!(Q::Any, p::HMCMom, pf::PseudoFermion, nsteps::Int64,
                   dtau::Float64, quenched::Bool, lattice::Lattice)
-    updatemom!(p, pf, dtau./2, quenched, lattice)
+    updatemom!(Q, p, pf, dtau./2, quenched, lattice)
     for istep in 1:nsteps
         #println("Leapfrog steps: $istep/$nsteps")
         updategauge!(p, dtau, lattice)
-        updatemom!(p, pf, dtau, quenched, lattice)
+        updatemom!(Q, p, pf, dtau, quenched, lattice)
     end
-    updatemom!(p, pf, dtau./2, quenched, lattice)
+    updatemom!(Q, p, pf, dtau./2, quenched, lattice)
 end
 
-function updatemom!(p::HMCMom, pf::PseudoFermion, dtau::Float64, quenched::Bool,
+function updatemom!(Q:: Any, p::HMCMom, pf::PseudoFermion, dtau::Float64, quenched::Bool,
                     lattice::Lattice)
     if quenched == false
         # pforce_common involves inversion so we want to do it outside of the loop
         # lhs = left-hand-side of dot product and psi =  D^{-1}phi for phi = pf field
-        lhs, psi = pforce_common(pf, lattice)
+        lhs, psi = pforce_common(Q, pf, lattice)
     end
     for i in 1:lattice.ntot
         if quenched == false

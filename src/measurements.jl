@@ -27,17 +27,17 @@ to TensorOperations.
 field_in1 and field_in2 are the spacelike and timelike Dirac
 component of the propagators.
 """
-function projectfield(field_in1::Field, field_in2::Field,
+function projectfield(field_in1::FlatField, field_in2::FlatField,
                       lattice::Lattice)
     field_out = Array{ComplexF64}(undef, 2, 2, lattice.nx,
                                                lattice.nt)
     for i in 1:lattice.ntot
-        for j in 1:2
-            x = lattice.corr_indx[i][1]
-            t = lattice.corr_indx[i][2]
-            field_out[1, j, x, t] = field_in1[i][j]
-            field_out[2, j, x, t] = field_in2[i][j]
-        end
+        x = lattice.corr_indx[i][1]
+        t = lattice.corr_indx[i][2]
+        field_out[1, 1, x, t] = field_in1[dirac_comp1(i)]
+        field_out[2, 1, x, t] = field_in2[dirac_comp1(i)]
+        field_out[1, 2, x, t] = field_in1[dirac_comp2(i)]
+        field_out[2, 2, x, t] = field_in2[dirac_comp2(i)]
     end
     return field_out
 end

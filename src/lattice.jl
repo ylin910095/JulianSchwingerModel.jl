@@ -96,8 +96,10 @@ mutable struct Lattice
             anglex, anglet, linkx, linkt)
     end
 end
-# Copy all lattice content from lattice_from to lattice_to
-# Stupid implementation, improve later
+
+"""
+Copy all lattice content from lattice_from to lattice_to
+"""
 function deepcopy!(lattice_to::Lattice, lattice_from::Lattice)
     lattice_to.ntot = lattice_from.ntot
     lattice_to.nx = lattice_from.nx
@@ -116,6 +118,17 @@ function deepcopy!(lattice_to::Lattice, lattice_from::Lattice)
         lattice_to.anglet = lattice_from.anglet
         lattice_to.linkx = lattice_from.linkx
         lattice_to.linkt = lattice_from.linkt
+    end
+end
+
+
+"""
+Called after updating gauge angles to make gauge links consistent
+"""
+function sync!(lattice::Lattice)
+    for i in lattice.ntot
+        lattice.linkx[i] = exp(lattice.anglex[i]*im)
+        lattice.linkt[i] = exp(lattice.anglet[i]*im)
     end
 end
 

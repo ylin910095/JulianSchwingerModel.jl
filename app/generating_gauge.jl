@@ -1,34 +1,34 @@
 using Printf
 
-include("./lattice.jl")
-include("./spinor.jl")
-include("./dirac.jl")
-include("./solvers.jl")
-include("./randlattice.jl")
-include("./leapfrog.jl")
-include("./hmc_types.jl")
-include("./measurements.jl")
-include("./hmc.jl")
-include("./io.jl")
+include("../src/lattice.jl")
+include("../src/spinor.jl")
+include("../src/dirac.jl")
+include("../src/solvers.jl")
+include("../src/randlattice.jl")
+include("../src/leapfrog.jl")
+include("../src/hmc_types.jl")
+include("../src/measurements.jl")
+include("../src/hmc.jl")
+include("../src/io.jl")
 
 function generating_gauge()
     # Gauge parameters
     nx = 32
     nt = 32
-    kappa = 0.26 # Hopping parameter = (2m0 + 4r)^{-1} at 2D where r is Wilson parameter
+    kappa = 0.235 # Hopping parameter = (2m0 + 4r)^{-1} at 2D where r is Wilson parameter
     mass = (kappa^-1 - 4)/2
-    beta = 2.29
+    beta = 10.0
     quenched = false
-    saving_directory = "/home/ylin/scratch/schwinger_julia/src/gauge/"
+    saving_directory = "/home/ylin/Dropbox/julianschwinger/app/gauge/"
 
     # HMC parameters
     tau = 1
-    integrationsteps = 200
-    thermalizationiter = 10
-    measurements = 1000
+    integrationsteps = 300
+    thermalizationiter = 500
+    measurements = 10000
 
     # Create lattice
-    lattice = load_lattice("/home/ylin/scratch/schwinger_julia/src/gauge/l3232b2.2900k0.2600seed1234-000224.gauge")
+    lattice = Lattice(nx, nt, mass, beta, quenched)
     hmcparam = HMCParam(tau, integrationsteps, thermalizationiter, measurements)
     saving_prefix = @sprintf "%sl%d%db%.4fk%.4fseed%d-" saving_directory nx nt beta kappa rngseed
     accptot = 0

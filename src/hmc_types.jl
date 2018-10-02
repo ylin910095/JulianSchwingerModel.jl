@@ -40,15 +40,16 @@ in which has expect arguments:
 and outputs gamma5 * pseudofermion Field
 """
 struct PseudoFermion
-    pf::Spinor
-    function PseudoFermion(lattice::Lattice, g5Dslash::Any)
-        pf = Spinor(lattice.ntot)
-        Dm1pf = Spinor(lattice.ntot)
+    pf::FlatField
+    function PseudoFermion(lattice::Lattice, g5Dslash_vec::Any)
+        pf = FlatField(undef, 2*lattice.ntot)
+        Dm1pf = FlatField(undef, 2*lattice.ntot)
         for i in 1:lattice.ntot
             # Sample D^{-1}\phi according to normal distribution
-            Dm1pf.s[i] = [(gauss() + im*gauss())/sqrt(2), (gauss() + im*gauss())/sqrt(2)]
+            Dm1pf[dirac_comp1(i)] = (gauss() + im*gauss())/sqrt(2)
+            Dm1pf[dirac_comp2(i)] = (gauss() + im*gauss())/sqrt(2)
         end
-        pf.s = gamma5mul(g5Dslash(Dm1pf.s, lattice, lattice.mass))
+        pf = gamma5mul(g5Dslash_vec(Dm1pf, lattice, lattice.mass))
         new(pf)
     end
 end

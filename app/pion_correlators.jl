@@ -21,9 +21,9 @@ function meson_correlators()
     nx = 32
     nt = 32
     # Hopping parameter = (2m0 + 4r)^{-1} at 2D where r is Wilson parameter
-    kappa = 0.22
+    kappa = 0.235
     mass = (kappa^-1 - 4)/2
-    beta = 6.0
+    beta = 10.0
     quenched = false
     t0 = 1 # Location of wallsource
     saving_directory = "./gauge/"
@@ -38,34 +38,49 @@ function meson_correlators()
 
     # Now invert propagators with wall sources for each
     # Dirac component
-    wallsource1 = Field(undef, Int(nx*nt))
-    wallsource2 = Field(undef, Int(nx*nt))
+    wallsource1 = FlatField(undef, 2*Int(nx*nt))
+    wallsource2 = FlatField(undef, 2*Int(nx*nt))
     for i in 1:Int(nx*nt)
         if lin2corr(i, nx)[2] == t0
-            wallsource1[i] = [1.0, 0.0]
-            wallsource2[i] = [0.0, 1.0]
+            wallsource1[dirac_comp1(i)] = 1.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 1.0
         else
-            wallsource1[i] = [0.0, 0.0]
-            wallsource2[i] = [0.0, 0.0]
+            wallsource1[dirac_comp1(i)] = 0.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 0.0
         end
     end
 
     pioncorrs = Array{Float64}(undef, length(allgaugeconfig), nt)
+    a0corrs =  Array{Float64}(undef, length(allgaugeconfig), nt)
+    g1corrs =  Array{Float64}(undef, length(allgaugeconfig), nt)
     for (ic, ifile) in enumerate(allgaugeconfig)
         println("Current gauge: $ifile ($ic/$(length(allgaugeconfig)))")
         lattice = load_lattice(saving_directory * ifile)
+        Q = gamma5_Dslash_linearmap(lattice, lattice.mass)
         # Invert propagators all for both Dirac componenets
-        prop1 = cg_Q(lattice, mass, wallsource1, gamma5mul(wallsource1))
-        prop2 = cg_Q(lattice, mass, wallsource2, gamma5mul(wallsource2))
+        prop1 = minres_Q(Q, lattice, mass, gamma5mul(wallsource1))
+        prop2 = minres_Q(Q, lattice, mass, gamma5mul(wallsource2))
         prop = [prop1, prop2]
         # Tieups
-        corr = measure_a0(prop, lattice)
-        println(real(corr[1:10]))
+        pioncorr = measure_pion(prop, lattice)
+        a0corr = measure_a0(prop, lattice)
+        g1corr = measure_g1(prop, lattice)
+        println("pion[1:5]: ", real(pioncorr[1:5]))
+        println("a0[1:5]:   ", real(a0corr[1:5]))
+        println("g1[1:5]:   ", real(g1corr[1:5]))
         for it in 1:nt
-            pioncorrs[ic, it] =  real((corr ./ nx)[it])
+            a0corrs[ic, it] =  real((a0corr ./ nx)[it])
+            pioncorrs[ic, it] = real((pioncorr) ./ nx)[it]
+            g1corrs[ic, it] = real((g1corr) ./ nx)[it]
         end
     end
-    npzwrite("a0_correlators.npz", pioncorrs)
+    npzwrite("a0_correlators_l$(nx)$(nt)q$(quenched)b$(beta)k$(kappa).npz", a0corrs)
+    npzwrite("pion_correlators_l$(nx)$(nt)q$(quenched)b$(beta)k$(kappa).npz", pioncorrs)
+    npzwrite("g1_correlators_l$(nx)$(nt)q$(quenched)b$(beta)k$(kappa).npz", g1corrs)
 end
 
 """
@@ -94,11 +109,15 @@ function meson_correlators_hmc()
     wallsource2 = Field(undef, Int(nx*nt))
     for i in 1:Int(nx*nt)
         if lin2corr(i, nx)[2] == t0
-            wallsource1[i] = [1.0, 0.0]
-            wallsource2[i] = [0.0, 1.0]
+            wallsource1[dirac_comp1(i)] = 1.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 1.0
         else
-            wallsource1[i] = [0.0, 0.0]
-            wallsource2[i] = [0.0, 0.0]
+            wallsource1[dirac_comp1(i)] = 0.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 0.0
         end
     end
 
@@ -157,7 +176,4 @@ function meson_correlators_hmc()
     end
 end
 
-# Do some profiling
-Profile.clear()
-Profile.init(Int(1e10), 0.001)
-@profile meson_correlators_hmc()
+meson_correlators()
