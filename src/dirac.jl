@@ -6,6 +6,7 @@ include("./lattice.jl")
 include("./spinor.jl")
 include("./gamma_matrices.jl")
 include("./randlattice.jl")
+include("./io.jl")
 
 """
 gamma5*Dslash operator
@@ -73,7 +74,7 @@ end
 function gamma5_Dslash_wilson_vector(field_in::FlatField,
                                      lattice::Lattice,
                                      mass::Float64)
-    y = deepcopy(field_in)
+    y = zero(FlatField(undef, 2*lattice.ntot))
     gamma5_Dslash_wilson_vector!(y, field_in, lattice, mass)
     return y
 end
@@ -82,18 +83,20 @@ function gamma5_Dslash_wilson!(field_out::Field,
                                field_in::Field,
                                lattice::Lattice,
                                mass::Float64)
-    tmpa = zero(Vector{ComplexF64}(undef, 2 * lattice.ntot))
+    tmpa = zero(FlatField(undef, 2 * lattice.ntot))
     gamma5_Dslash_wilson_vector!(tmpa, collect(flatten(field_in)),
                                  lattice, mass)
-    for i in 1:length(tmpa)
-        field_out[i] = tmpa[i]
+                                 
+    for i in 1:lattice.ntot
+        field_out[1, i] = tmpa[dirac_comp1(i)]
+        field_out[2, i] = tmpa[dirac_comp2(i)]
     end
 end
 
 function gamma5_Dslash_wilson(field_in::Field,
                               lattice::Lattice,
                               mass::Float64)
-    y = deepcopy(field_in)
+    y = zero(Field(undef, 2, lattice.ntot))
     gamma5_Dslash_wilson!(y, field_in, lattice, mass)
     return y
 end
@@ -108,8 +111,7 @@ validation of gamma5_Dslash_wilson only.
 function gamma5_Dslash_wilson_matrix(field_in::Field,
                                      lattice::Lattice,
                                      mass::Float64)
-    field_out = Field(undef, 2, lattice.ntot)
-    zero!(field_out)
+    field_out = zero(Field(undef, 2, lattice.ntot))
     factor = 2 + mass
     for i in 1:lattice.ntot
         left1_i = lattice.leftx[i]
@@ -132,12 +134,14 @@ function gamma5_Dslash_wilson_matrix(field_in::Field,
         else
             in_left2_i = field_in[:, left2_i]
         end
+        
         field_out[:, i] = gamma5 * (factor .* field_in[:, i] - 0.5*(
             link1[i] .* (I - gamma1) * in_right1_i +
             conj(link1[left1_i]) .* (I + gamma1) * in_left1_i +
             link2[i] .* (I - gamma2) * in_right2_i +
             conj(link2[left2_i]) .* (I + gamma2) * in_left2_i
             ))
+        
     end
     return field_out
 end
@@ -167,10 +171,11 @@ function test_gamma5Dslash()
     end
 
     # Check correctness
+    print_lattice(lattice)
+    println()
     println("=======================================================================")
     println("=====                    gamma_5*Dslash Wilson                    =====")
     println("=======================================================================")
-    println("Lattice dimension: (nx=$nx, nt=$nt), mass: $mass")
     print("gamma_5 * Dslash explicit form: ")
     @time field_out1 = gamma5_Dslash_wilson(field_in, lattice, mass)
     print("gamma_5 * Dslash matrix form: ")
@@ -179,58 +184,36 @@ function test_gamma5Dslash()
     if ddiff == 0
         println("COMPARISON PASSED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix")
     else
-        println("COMPARISON FAILED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix")
+        println("COMPARISON FAILED: gamma5_Dslash_wilson vs gamma5_Dslash_wilson_matrix, difference = $ddiff")
         outputflag += 1
     end
 
+    ################################################################
     # Now check hermiticity of gamma5*Dslash by constructing
-    # the full matrix representation (only work for small ntot)
-    Dslash = Array{ComplexF64, 4}(undef, lattice.ntot, lattice.ntot, 2, 2)
-    field_in = zero(Field(undef, 2, lattice.ntot))
-    field_out = zero(Field(undef, 2, lattice.ntot))
+    # the full matrix representation
+    Q = zero(Array{ComplexF64}(undef, 2*lattice.ntot, 2*lattice.ntot))
+    x = zero(FlatField(undef, 2*lattice.ntot))
+    for i in 1:2*lattice.ntot
+        x[i] = 1.0 
+        Q[:, i] = gamma5_Dslash_wilson_vector(x, lattice, lattice.mass)
+        x[i] = 0.0 
+    end 
 
-    for i in 1:lattice.ntot
-        for j in 1:lattice.ntot
-            for k in 1:2
-                for l in 1:2
-                    field_in[l, j] = 1.0 + im * 0.0
-                    gamma5_Dslash_wilson!(field_out, field_in, lattice, mass)
-                    field_in[l, j] = 0.0 # reset to zero
-                    Dslash[i,j,k,l] = field_out[k, i]
-                    if isnan(real(Dslash[i,j,k,l]))
-                        println(Dslash[i,j,k,l], "   ", field_out[k, i])
-                    end
-                end
-            end
-        end
-    end
-
-    hermiflag = 0
-    for i in 1:lattice.ntot
-        for j in 1:lattice.ntot
-            for k in 1:2
-                for l in 1:2
-                    if norm(Dslash[i,j,k,l] - conj(Dslash[j,i,l,k])) > 1e-10
-                        hermiflag += 1
-                    end
-                end
-            end
-        end
-    end
-    if hermiflag == 0
+    # Check Hermiticity
+    dQ = adjoint(Q) - Q
+    if dQ == zero(Array{ComplexF64}(undef, 2*lattice.ntot, 2*lattice.ntot))
         println("HERMITICITY PASSED: gamma5_Dslash_wilson")
     else
         println("HERMITICITY FAILED: gamma5_Dslash_wilson")
+        outputflag += 1
     end
-    outputflag += hermiflag
-
+    ################################################################
     # Test linearmap construction of gamma5_Dslash_wilson
     g5D = gamma5_Dslash_linearmap(lattice, mass)
     field_in = Field(undef, 2, lattice.ntot)
     for i in 1:2*lattice.ntot
         field_in[i] = gauss() + im * gauss()
     end
-
     print("gamma_5 * Dslash LinearMap form: ")
     flat_in = collect(flatten(field_in))
     @time temp_out = g5D * flat_in
@@ -238,11 +221,11 @@ function test_gamma5Dslash()
     print("gamma_5 * Dslash explicit form: ")
     @time field_out2 = gamma5_Dslash_wilson(field_in, lattice, mass)
 
-    diff = sum(field_out1 - field_out2)
+    ddiff = sum(field_out1 - field_out2)
     if ddiff == 0
         println("CORRECTNESS PASSED: gamma5_Dslash_linearmap ")
     else
-        println("CORRECTNESS FAILED: gamma5_Dslash_linearmap")
+        println("CORRECTNESS FAILED: gamma5_Dslash_linearmap, difference = $ddiff")
         outputflag += 1
     end
 

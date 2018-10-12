@@ -10,6 +10,7 @@ function print_lattice(lattice::Lattice)
     println("nx:         $(lattice.nx)")
     println("nt:         $(lattice.nt)")
     println("mass:       $(lattice.mass)")
+    println("beta:       $(lattice.beta)")
     println("quenched:   $(lattice.quenched)")
     print_sep()
 end
