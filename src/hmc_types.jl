@@ -3,6 +3,16 @@ include("./spinor.jl")
 include("./gamma_matrices.jl")
 include("./randlattice.jl")
 
+"""
+Base HMC type
+"""
+mutable struct HMCParam
+    tau::Float64 # Total HMC evolution time
+    nintsteps::Int64 # Integration timesteps
+    thermalizationiter::Int64 # Number of thermalization steps
+    measurements::Int64 # Number of accepted measurements
+end
+
 mutable struct HMCParam
     tau::Float64 # Total HMC evolution time
     nintsteps::Int64 # Integration timesteps
