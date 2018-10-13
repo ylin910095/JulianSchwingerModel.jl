@@ -1,8 +1,9 @@
-module JulianSwinger
+module JulianSchwinger
 
 #############################################################################
 # -------------------------- Definitions ---------------------------------- #
 #############################################################################
+
 # Set global seed for random number generators
 include("randlattice.jl")
 
@@ -44,8 +45,6 @@ include("measurements.jl")
 
 # IO routines, including formatting output
 include("io.jl")
-
-
 
 ########################################################################
 # ----------------------------- Interface ---------------------------- #
