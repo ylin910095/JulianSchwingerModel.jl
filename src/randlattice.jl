@@ -5,7 +5,7 @@ Set seed for all random number generators
 """
 # Set the seeds for all prng generation
 if ((@isdefined rngseed) && (@isdefined rng)) == false
-    const global rngseed = 4321
+    const global rngseed = 8888
     const global rng = MersenneTwister(rngseed)
 end
 

@@ -33,24 +33,24 @@ function matrix_decomp(A::AbstractArray, Y::UnitRange{Int64},
     return B
 end
 
-function main()
+function domaindecomp1()
     nx = 36
-    nt = 100
+    nt = 60
     mass = 0.02
     beta = 10.0
     quenched = true
-    thermaliter = 10
+    thermaliter = 5
     measurements = 1
     tau = 1
     nsteps = 400
     check_herm = true # Do we want to check hermiticity of Q?
 
     # Domains for domain decomposition
-    lambda0 = 1:2*40*nx
-    lambda1 = 2*40*nx+1:2*60*nx # Frozen region
-    lambda2 = 2*60*nx+1:2*nx*nt
-    omega0star = 1:2*60*nx
-    omega1star = 2*40*nx+1:2*nx*nt
+    lambda0 = 1:2*10*nx
+    lambda1 = 2*10*nx+1:2*50*nx # Frozen region
+    lambda2 = 2*50*nx+1:2*nx*nt
+    omega0star = 1:2*50*nx
+    omega1star = 2*10*nx+1:2*nx*nt
 
     # Define callback function for that measures absolute difference 
     # between exact and approximate propagators 
@@ -88,19 +88,22 @@ function main()
         # the final matrix will be linear transformation 
         # from lambda0 to lambda2
         A = matrix_decomp(Q_omg0s_inv, lambda0, lambda0)
+        #A = matrix_decomp(Q_omg0s_inv, 1:size(Q_omg0s_inv)[1], lambda0)
         C = matrix_decomp(Q_omg1s_inv, length(lambda1)+1:size(Q_omg1s_inv)[1], 
                                        1:size(Q_omg1s_inv)[2])
 
         # Now compute the correction term
-        L1 = matrix_decomp(Q_omg0s_inv, lambda0, 
+        M1 = matrix_decomp(Q_omg0s_inv, lambda0, 
                            1:size(Q_omg0s_inv)[2])
-        L2 = matrix_decomp(Q, omega0star, omega1star)
-        L3 = matrix_decomp(Q_omg1s_inv, 1:size(Q_omg1s_inv)[1], 
+        M2 = matrix_decomp(Q, omega0star, lambda2)
+        M3 = matrix_decomp(Q_omg1s_inv, 
+                           1+length(lambda1):size(Q_omg1s_inv)[2], 
                            1:size(Q_omg1s_inv)[2])
-        L4 = matrix_decomp(Q, omega1star, lambda0)
-        println(size(L1), " ", size(L2), " ", size(L3), " ", size(L4), " ")
-        corr = inv(I - L1*L2*L3*L4)
-        #corr = I 
+        M4 = matrix_decomp(Q, omega1star, lambda0)
+        T = M1*M2*M3*M4
+        println(size(M1), " ", size(M2), " ", size(M3), " ", size(M4), " ")
+        corr = inv(I - T)
+        #corr = I + T + T^2 + T^3 + T^4 + T^5 + T^6 + T^7 + T^8
 
         # Put everything together
         approxQinv = - C * Q_lambda10 * corr * A
@@ -108,26 +111,27 @@ function main()
         # Now comparing the Qinv with approxQinv 
         Q_lambda20_inv = matrix_decomp(Qinv, lambda2, lambda0)
         Qout = approxQinv
-        #println(sum(Q_lambda20_inv - approxQinv))
+        #println(sum(abs(Q_lambda20_inv - approxQinv))/length(approxQinv))
         #error()
         tol = 1e-15
         for i in 1:length(Q_lambda20_inv)
             if abs(real(Q_lambda20_inv[i] - approxQinv[i])) > tol || 
                abs(imag(Q_lambda20_inv[i] - approxQinv[i])) > tol
-                println(Q_lambda20_inv[i] - approxQinv[i])
+                #println(Q_lambda20_inv[i] - approxQinv[i])
             end
-            dQinvout[i] += abs(Q_lambda20_inv[i] - approxQinv[i])
+            dQinvout[i] += abs(Q_lambda20_inv[i] - approxQinv[i])/length(Q_lambda20_inv)
         end
     end
 
     #############################################################
     # End of definitions, start doing actual work
     #############################################################
-
+    
     lattice = Lattice(nx, nt, mass, beta, quenched)
     hmcparam = HMCParam(tau, nsteps, thermaliter, measurements)
     print_lattice(lattice)
 
+    # Finally do all measurements
     # Thermalize the lattice
     HMCWilson_continuous_update!(lattice, hmcparam)
 
@@ -141,7 +145,93 @@ function main()
     dQinvout = dQinvout ./ hmcparam.measurements
     Qout = Qout ./ hmcparam.measurements
     println("sum dQinvout = $(sum(dQinvout))")
-    npzwrite("dQinvout_l3636m0.02b10quenched.npz", dQinvout)
-    npzwrite("Qinvout_l3636m0.02b10quenched.npz", Qout)
+    #npzwrite("dQinvout_l3636m0.02b10quenched.npz", dQinvout)
+    #npzwrite("Qinvout_l3636m0.02b10quenched.npz", Qout)
+    
 end 
-main()
+
+function domaindecomp2()
+
+    # Setup lattice
+    nx = 36
+    nt = 100
+    mass = 0.27
+    beta = 10.0
+    quenched = true
+    thermaliter = 1000 # We load from existing lattice
+    measurements = 50000
+    tau = 1
+    nsteps = 600
+
+    # Setup domains
+    lambda0 = 1:2*40*nx
+    lambda1 = 2*40*nx+1:2*60*nx # Frozen region
+    lambda2 = 2*60*nx+1:2*nx*nt
+    omega0star = 1:2*60*nx
+    omega1star = 2*40*nx+1:2*nx*nt
+
+    # Sources for measurements and sources
+    t0 = 1
+    wallsource1 = FlatField(undef, Int(2*nx*nt))
+    wallsource2 = FlatField(undef, Int(2*nx*nt))
+    for i in 1:Int(nx*nt)
+        if lin2corr(i, nx)[2] == t0
+            wallsource1[dirac_comp1(i)] = 1.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 1.0
+        else
+            wallsource1[dirac_comp1(i)] = 0.0
+            wallsource1[dirac_comp2(i)] = 0.0
+            wallsource2[dirac_comp1(i)] = 0.0
+            wallsource2[dirac_comp2(i)] = 0.0
+        end
+    end
+
+    #--------- Start Working ---------#
+    #lattice = load_lattice("./gauge/l$(nx)$(nt)q$(quenched)b$(beta)m$(mass).gauge")
+    lattice = Lattice(nx, nt, mass, beta, quenched)
+    hmcparam = HMCParam(tau, nsteps, thermaliter, measurements)
+    print_lattice(lattice)
+
+    # Define measurement routine
+    a0corrlist = []
+    g1corrlist = []
+    pioncorrlist = []
+    function _measure_all!(lattice::Lattice)
+        Q = gamma5_Dslash_linearmap(lattice, lattice.mass)
+        prop1 = minres_Q(Q, lattice, mass, gamma5mul(wallsource1))
+        prop2 = minres_Q(Q, lattice, mass, gamma5mul(wallsource2))
+        prop = [prop1, prop2]
+        pioncorr = measure_pion(prop, lattice)
+        a0corr = measure_a0(prop, lattice)
+        g1corr = measure_g1(prop, lattice)
+        println("pion[1:5]: ", real(pioncorr[1:5]))
+        println("a0[1:5]:   ", real(a0corr[1:5]))
+        println("g1[1:5]:   ", real(g1corr[1:5]))
+        push!(pioncorrlist, pioncorr)
+        push!(g1corrlist, g1corr)
+        push!(a0corrlist, a0corr)
+    end
+    
+    # Rethermalize the lattice
+    HMCWilson_continuous_update!(lattice, hmcparam)
+
+    # Do measurements
+    HMCWilson_continuous_update!(lattice, hmcparam, _measure_all!)
+
+    # Write to file
+    pioncorrs = Array{Float64}(undef, hmcparam.measurements, nt)
+    a0corrs =  Array{Float64}(undef, hmcparam.measurements, nt)
+    g1corrs =  Array{Float64}(undef, hmcparam.measurements, nt)
+    for ic in 1:hmcparam.measurements
+        a0corrs[ic,:] = real(a0corrlist[ic] ./ nx)
+        pioncorrs[ic,:] = real(pioncorrlist[ic] ./ nx)
+        g1corrs[ic,:] = real(g1corrlist[ic] ./ nx)
+    end
+    npzwrite("a0_correlators_l$(nx)$(nt)q$(quenched)b$(beta)m$(mass).npz", a0corrs)
+    npzwrite("pion_correlators_l$(nx)$(nt)q$(quenched)b$(beta)m$(mass).npz", pioncorrs)
+    npzwrite("g1_correlators_l$(nx)$(nt)q$(quenched)b$(beta)m$(mass).npz", g1corrs)
+end
+#domaindecomp2()
+domaindecomp1()

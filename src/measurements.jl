@@ -5,7 +5,7 @@ include("./spinor.jl")
 """
 2D plaq plaquette of unit size at site i
 """
-function plaq(i::Int64, lattice::Lattice)
+@inline function plaq(i::Int64, lattice::Lattice)
     return lattice.linkx[i] * lattice.linkt[lattice.rightx[i]] *
            conj(lattice.linkx[lattice.upt[i]]) *
            conj(lattice.linkt[i])
@@ -21,7 +21,7 @@ end
 
 """
 Project a variable of type Field into an Array with
-shape (2, lattice.nx, lattice.nt) so it can be passed
+shape (2, 2, lattice.nx, lattice.nt) so it can be passed
 to TensorOperations.
 
 field_in1 and field_in2 are the spacelike and timelike Dirac
