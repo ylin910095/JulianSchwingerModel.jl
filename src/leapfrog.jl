@@ -1,10 +1,3 @@
-include("./lattice.jl")
-include("./spinor.jl")
-include("./dirac.jl")
-include("./hmc_types.jl")
-include("./hmc_wilson_forces.jl")
-
-
 function leapfrog!(Q::Any, p::HMCMom, pf::PseudoFermion, nsteps::Int64,
                   dtau::Float64, lattice::Lattice)
     updatemom!(Q, p, pf, dtau./2, lattice)
@@ -42,11 +35,3 @@ function updategauge!(p::HMCMom, dtau::Float64, lattice::Lattice)
         lattice.linkt[i] = cos(lattice.anglet[i]) + im*sin(lattice.anglet[i])
     end
 end
-
-function test_leapfrog()
-    lattice = Lattice(3, 3, 0.1, 0.1)
-    pf = PseudoFermion(lattice, gamma5_Dslash_wilson)
-    p = HMCMom(lattice)
-    leapfrog!(p, pf, 10, 1.0, lattice)
-end
-#test_leapfrog()

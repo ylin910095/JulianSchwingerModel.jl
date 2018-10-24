@@ -1,6 +1,3 @@
-include("./lattice.jl")
-include("./solvers.jl")
-include("./hmc_types.jl")
 """
 S_gauge = sum_i beta(1 - Re U_{plaq})
 Caluate the gauge action contribution at lattice

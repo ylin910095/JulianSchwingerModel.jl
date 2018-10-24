@@ -1,12 +1,9 @@
-include("./spinor.jl")
-
 if ((@isdefined gamma1) && (@isdefined gamma2) && (@isdefined gamma5))  == false
     # Conventions for gamma matrices
     const global gamma1 = [0.0 1.0; 1.0 0.0] # sigma_1
     const global gamma2 = [0.0 -1*im; im 0] # sigma_2
-    const global gamma5 = [1.0 0.0; 0.0 -1.0] # sigma_3d
+    const global gamma5 = [1.0 0.0; 0.0 -1.0] # sigma_3
 end
-
 
 """
 Left multiplication of gamma5 in place

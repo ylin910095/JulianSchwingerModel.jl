@@ -1,18 +1,6 @@
-include("./lattice.jl")
-include("./spinor.jl")
-include("./gamma_matrices.jl")
-include("./randlattice.jl")
-
 """
 Base HMC type
 """
-mutable struct HMCParam
-    tau::Float64 # Total HMC evolution time
-    nintsteps::Int64 # Integration timesteps
-    thermalizationiter::Int64 # Number of thermalization steps
-    measurements::Int64 # Number of accepted measurements
-end
-
 mutable struct HMCParam
     tau::Float64 # Total HMC evolution time
     nintsteps::Int64 # Integration timesteps
@@ -46,7 +34,7 @@ and N is some normalization factor.
 g5Dslash input for the inner constructor is the
 gamma5 * Dslash operator
 in which has expect arguments:
-    field_in::Field, lattice::Lattice, mass::Float64
+    field_in::FlatField, lattice::Lattice, mass::Float64
 and outputs gamma5 * pseudofermion Field
 """
 struct PseudoFermion

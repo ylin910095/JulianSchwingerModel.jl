@@ -1,5 +1,11 @@
 module JulianSchwingerModel
 
+import Printf, Random, Base.Iterators
+import TensorOperations 
+using LinearAlgebra, Base.Iterators
+using LinearMaps, IterativeSolvers, TensorOperations
+import Base: zero, convert # Extend base operations
+
 #############################################################################
 # -------------------------- Definitions ---------------------------------- #
 #############################################################################
@@ -53,18 +59,20 @@ include("io.jl")
 # Definitions in lattice.jl
 export Lattice, deepcopy!, sync!, lin2corr
 # Definitions in spinor.jl
-export FlatField, zero, zero!, dirac_comp1, dirac_comp2
-# Definitions found in gamma_matrices.jl
+export FlatField, zero, zero!, convert, dirac_comp1, dirac_comp2
+# Definitions in gamma_matrices.jl
 export gamma1, gamma2, gamma5, gamma5mul!, gamma5mul, gamma5mul!
-# Definitions found in dirac.jl
+# Definitions in dirac.jl
 export gamma5_Dslash_wilson_vector!, gamma5_Dslash_wilson_vector, gamma5_Dslash_linearmap
-# Definitions found in hmc.jl
+# Definitions in solvers.jl
+export minres_Q
+# Definitions in hmc.jl, hmc_types.jl
 export HMCParam, HMCWilson_continuous_update!
-# Defintions found in measurements.jl
+# Defintions in measurements.jl
 export measure_wilsonloop
-# Definitions found in io.jl
+# Definitions in io.jl
 export print_lattice, checksum_lattice, save_lattice, load_lattice
-# Definitions found in randlattice.jl
+# Definitions in randlattice.jl
 export gauss, rand01, rngseed
 
 end # module

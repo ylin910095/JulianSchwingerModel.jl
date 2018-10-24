@@ -1,7 +1,7 @@
 """
 Linear index (Coulumn-major) to tuple of coordinate in (x,t)
 """
-@inline function lin2corr(i::Int64, nx::Int64)
+@inline function lin2corr(i::Int64, nx::Int64)::Tuple{Int64, Int64}
     return (Int64((i-1)%nx + 1),
             Int64(floor((i-1)/nx) + 1))
 end
@@ -133,42 +133,3 @@ function sync!(lattice::Lattice)
         lattice.linkt[i] = exp(lattice.anglet[i]*im)
     end
 end
-
-function test_latticesetup(nx::Int64, nt::Int64, mass::Float64, beta::Float64, quenched::Bool)
-
-    # Testing for correctness of finding neighbors
-    @time lattice = Lattice(nx, nt, mass, beta, quenched)
-    println("=======================================================================")
-    println("=====                        Lattice Setup                        =====")
-    println("=======================================================================")
-    println("lattice dimensions (nx, nt): ", lattice.nx, ", ", lattice.nt)
-    println("Coordinate indices: ")
-    display(lattice.corr_indx)
-    println("\n\nLinear indices")
-    display(lattice.lin_indx)
-    println("\n\nleft_x:")
-    display(lattice.leftx)
-    println("\n\nright_x: ")
-    display(lattice.rightx)
-    println("\n\nup_t:    ")
-    display(lattice.upt)
-    println("\n\ndown_t:  ")
-    display(lattice.downt)
-    println("")
-    println("=======================================================================")
-    println("=====                      Gauge Angles/Links                     =====")
-    println("=======================================================================")
-    println("Gauge angles in x direction: ")
-    display(lattice.anglex)
-    println("")
-    println("Gauge angles in t direction: ")
-    display(lattice.anglet)
-    println("")
-    println("Gauge links in x direction: ")
-    display(lattice.linkx)
-    println("")
-    println("Gauge Angles in t direction: ")
-    display(lattice.linkt)
-    println("")
-end
-#test_latticesetup(5, 5, 0.1, 0.1)

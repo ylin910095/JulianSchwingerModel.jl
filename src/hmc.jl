@@ -1,15 +1,3 @@
-using Printf
-
-include("./lattice.jl")
-include("./spinor.jl")
-include("./dirac.jl")
-include("./solvers.jl")
-include("./randlattice.jl")
-include("./leapfrog.jl")
-include("./hmc_types.jl")
-include("./measurements.jl")
-include("./io.jl")
-
 """
 Calculate Hamiltonian. Q is returned by gamma5_Dslash_linearmap
 """
@@ -75,14 +63,15 @@ function HMCWilson_update!(lattice::Lattice, hmcparam::HMCParam)
 end
 
 """
-    Perform HMC update for some number of accepted iterations. The number of accepted iterations
+Perform HMC update for some number of accepted iterations. The number of accepted iterations
 depend on the length of fs! If fs! is not given, it is assumed to be thermalization processed
 so it will update for iterations given by hmcparam.thermalizationiter. However, if fs! is not empty,
 it is assumed to be measurements run and will update for iterations given by hmcparam.measurements
 
-    Note that fs! should be a list of callback functions that accept lattice::Lattice as the sole input
+Note that fs! should be a list of callback functions that accept lattice::Lattice as the sole input
 argument. For each accepted update in the measurement runs, each callback function in fs! will be called
 once to perform presumably some measurements on the current lattice.
+
 """
 function HMCWilson_continuous_update!(lattice::Lattice, hmcparam::HMCParam, fs!...)
     # Determine if we are thermalizing lattice or making measurements
@@ -108,11 +97,11 @@ function HMCWilson_continuous_update!(lattice::Lattice, hmcparam::HMCParam, fs!.
         accptot += accp
         accprate = accptot/itertot
         if thermalrun
-            println((@sprintf "Thermalization iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
-                    (@sprintf ", accp rate = %.2f)" accprate))
+            println((Printf.@sprintf "Thermalization iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
+                    (Printf.@sprintf ", accp rate = %.2f)" accprate))
         else
-            println((@sprintf "Measurement iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
-            (@sprintf ", accp rate = %.2f)" accprate))
+            println((Printf.@sprintf "Measurement iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
+            (Printf.@sprintf ", accp rate = %.2f)" accprate))
             if accp
                 # Call each function in fs! to do measurements
                 for f! in fs!
@@ -129,49 +118,3 @@ function HMCWilson_continuous_update!(lattice::Lattice, hmcparam::HMCParam, fs!.
     end
     print_sep()
 end
-
-function test_HMC()
-    # Lattice param
-    nx = 32
-    nt = 32
-    kappa = 0.26 # Hopping parameter
-    mass = (kappa^-1 - 4)/2
-    beta = 2.5
-    quenched = true
-
-    # HMC param
-    tau = 3
-    integrationsteps = 200
-    hmciter = 10000
-    thermalizationiter = 1000
-    lattice = Lattice(nx, nt, mass, beta, quenched)
-    hmcparam = HMCParam(tau, integrationsteps, hmciter, thermalizationiter)
-
-    accptot = 0
-    # Thermalization
-    for ithiter in 1:hmcparam.thermalizationiter
-        println("Thermalization steps: $ithiter/$(hmcparam.thermalizationiter)")
-        accp = HMCWilson_update!(lattice, hmcparam)
-        accptot += accp
-        accprate = accptot/ithiter
-        plaq = measure_wilsonloop(lattice)
-        println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
-    end
-    # Actual measurements
-    plaqsum = 0.0
-    accptot_hmc = 0
-    for ihmciter in 1:hmcparam.niter
-        println("Measurement steps: $ihmciter/$(hmcparam.niter)")
-        accp = HMCWilson_update!(lattice, hmcparam)
-        accptot += accp
-        accptot_hmc += accp
-        accprate = accptot/(ihmciter + hmcparam.thermalizationiter)
-        if accp == 1
-            plaq = measure_wilsonloop(lattice)
-            plaqsum += plaq
-            println("Accept = $accp; Acceptance rate = $accprate; Plaquette = $plaq")
-            println("Avg plaq: $(plaqsum/accptot_hmc)")
-        end
-    end
-end
-#test_HMC()

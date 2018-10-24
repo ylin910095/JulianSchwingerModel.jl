@@ -1,9 +1,3 @@
-using SHA
-include("./lattice.jl")
-include("./spinor.jl")
-include("./randlattice.jl")
-include("./measurements.jl")
-
 function print_lattice(lattice::Lattice)
     println("Lattice Info:")
     print_sep()
@@ -38,13 +32,13 @@ function checksum_lattice(lattice::Lattice)
         checksumstring *= string(lattice.anglex[i])
         checksumstring *= string(lattice.anglet[i])
     end
-    chsum = bytes2hex(sha256(checksumstring))
+    chsum = bytes2hex(SHA.sha256(checksumstring))
     return chsum
 end
 
 """
 Don't want to depend on other packages that might break in the future
-Julia update. Save all information in lattice to filename
+Julia update. Save all information in lattice to filename in binary
 """
 function save_lattice(lattice::Lattice, filename::String)
     io = open(filename, "w")
@@ -69,7 +63,6 @@ function save_lattice(lattice::Lattice, filename::String)
     for i in 1:lattice.ntot
         write(io, Float64(lattice.anglex[i]))
     end
-
     close(io)
 end
 
@@ -93,18 +86,6 @@ function load_lattice(filename::String)
     end
     anglex = Array{Float64}(undef, ntot)
     anglet = Array{Float64}(undef, ntot)
-    """
-    # Now combine all the rest of lines into a single string
-    # This is because \n could appear in binary encoding,
-    # and it will cause errors if we separate them line by line
-    allbinstr = ""
-    for istr in allline[2:end]
-        println(istr)
-        allbinstr *= istr
-    end
-    # Read gauge angles
-    buf = IOBuffer(allbinstr)
-    """
     for i in 1:ntot
         anglet[i] = read(buf, Float64)
     end
@@ -124,29 +105,3 @@ function load_lattice(filename::String)
     end
     return lattice
 end
-
-function test_latticeio()
-    # Lattice param
-    nx = 32
-    nt = 32
-    kappa = 0.26 # Hopping parameter
-    mass = (kappa^-1 - 4)/2
-    beta = 2.5
-    quenched = true
-    lattice = Lattice(nx, nt, mass, beta, quenched)
-    # Randomize lattice
-    for i in 1:lattice.ntot
-        lattice.anglex[i] = gauss()
-        lattice.anglet[i] = gauss()
-    end
-    save_lattice(lattice, "testsave.txt")
-    returned_lattice = load_lattice("testsave.txt")
-
-    println("Before saving:")
-    print_lattice(lattice)
-    println()
-    println("After saving")
-    print_lattice(returned_lattice)
-    println("TESTS PASSED: IO ")
-end
-#test_latticeio()
