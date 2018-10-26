@@ -26,9 +26,9 @@ scripts using the julia command:
 
 	"using JulianSchwingerModel" or "import JulianSchwingerModel"
 
-An example has been provided in
+An example has been provided in,
 
-   example/pion_corr.jl
+   	   example/pion_corr.jl
 
 To run this package from the Terminal, you must first make the julia executable 
 visible to your environment. To do this, create a soft link in your local bin
