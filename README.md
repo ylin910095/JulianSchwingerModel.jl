@@ -34,7 +34,7 @@ To run this package from the Terminal, you must first make the julia executable
 visible to your environment. To do this, create a soft link in your local bin
 directory, for example:
 
-   ln -s /Applications/Julia-1.0.1.app/Contents/Resources/julia/bin/julia /usr/local/bin/julia
+	   ln -s /Applications/Julia-1.0.1.app/Contents/Resources/julia/bin/julia /usr/local/bin/julia
 
 Then change directory to 'example' and run the command:
 
