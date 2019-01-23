@@ -26,7 +26,7 @@ end
 """
 Gamma5PseudoFermion field will be generated according to PDF:
 
-P(phi) = N*exp(D^{-1}phi, D^{-1}phi)
+P(phi) = N*exp{-(D^{-1}phi, D^{-1}phi)}
 
 where phi is PF field, D is the Dslash_wilson operator,
 and N is some normalization factor.

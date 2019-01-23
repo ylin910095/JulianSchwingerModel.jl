@@ -98,10 +98,10 @@ function HMCWilson_continuous_update!(lattice::Lattice, hmcparam::HMCParam, fs!.
         accprate = accptot/itertot
         if thermalrun
             println((Printf.@sprintf "Thermalization iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
-                    (Printf.@sprintf ", accp rate = %.2f)" accprate))
+                    (Printf.@sprintf ", accum accp rate = %.2f)" accprate))
         else
             println((Printf.@sprintf "Measurement iterations: %4d (%4d/%4d completed" itertot accptot hmciter)*
-            (Printf.@sprintf ", accp rate = %.2f)" accprate))
+            (Printf.@sprintf ", accum accp rate = %.2f)" accprate))
             if accp
                 # Call each function in fs! to do measurements
                 for f! in fs!

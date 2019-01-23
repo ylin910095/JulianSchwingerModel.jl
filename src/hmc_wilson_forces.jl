@@ -1,4 +1,4 @@
-"""
+r"""
 S_gauge = sum_i beta(1 - Re U_{plaq})
 Caluate the gauge action contribution at lattice
 site i.  The constant beta * 1 is ignored in action.
@@ -89,17 +89,12 @@ psi = D^{-1}phi where phi is pf field.
 function pforce2(i::Int64, pf::PseudoFermion, lattice::Lattice, psi::FlatField,
                  lhs::FlatField)
     # Apply the variant of S_pf with respect of gaugel link
+    # with appropriate fermionic boundary conditions
     right2_i = lattice.upt[i]
-    # Implementing antiperiodic bc in time
-    if lattice.corr_indx[right2_i][2] == 1
-        bterm = -1
-    else
-        bterm = 1
-    end
-    psi_right2_1i = bterm * psi[dirac_comp1(right2_i)]
-    psi_right2_2i = bterm * psi[dirac_comp2(right2_i)]
-    lhs_right2_1i = bterm * lhs[dirac_comp1(right2_i)]
-    lhs_right2_2i = bterm * lhs[dirac_comp2(right2_i)]
+    psi_right2_1i = lattice.fermibc[i, 2] * psi[dirac_comp1(right2_i)]
+    psi_right2_2i = lattice.fermibc[i, 2] * psi[dirac_comp2(right2_i)]
+    lhs_right2_1i = lattice.fermibc[i, 2] * lhs[dirac_comp1(right2_i)]
+    lhs_right2_2i = lattice.fermibc[i, 2] * lhs[dirac_comp2(right2_i)]
     link2 = lattice.linkt[i]
 
     # First term in dot product

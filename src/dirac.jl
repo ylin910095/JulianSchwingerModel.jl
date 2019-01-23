@@ -11,31 +11,41 @@ function gamma5_Dslash_wilson_vector!(field_out::FlatField,
                                       mass::Float64)
     factor = 2 + mass
     for i in 1:lattice.ntot
+        # Find the indices for lattice points under different
+        # directions of parallel transports
         left1_i = lattice.leftx[i]
         left2_i = lattice.downt[i]
         right1_i = lattice.rightx[i]
         right2_i = lattice.upt[i]
 
-        # Implementing periodic bc in space
+        # Implementing bc in space with ghost cells
         in_right1_1_i = field_in[dirac_comp1(right1_i)]
         in_right1_2_i = field_in[dirac_comp2(right1_i)]
         in_left1_1_i = field_in[dirac_comp1(left1_i)]
         in_left1_2_i = field_in[dirac_comp2(left1_i)]
-
-        # Implementing antiperiodic bc in time
-        if lattice.corr_indx[right2_i][2] == 1
-            in_right2_1_i = -field_in[dirac_comp1(right2_i)]
-            in_right2_2_i = -field_in[dirac_comp2(right2_i)]
+        
+        # Finally, implement domain decomposition
+        # by setting zeros to the spinor field outside of the domian 
+        # This will not affect field_in or lattice
+        # TODO: Better way of implementing domain decomp in the future?
+        if right2_i > lattice.ntot # intend to access ghost cells
+            in_right2_1_i = 0 
+            in_right2_2_i = 0
         else
-            in_right2_1_i = field_in[dirac_comp1(right2_i)]
-            in_right2_2_i = field_in[dirac_comp2(right2_i)]
+            in_right2_1_i = field_in[dirac_comp1(right2_i)] * 
+                            lattice.fermibc[i, 2]
+            in_right2_2_i = field_in[dirac_comp2(right2_i)] *
+                            lattice.fermibc[i, 2]
         end
-        if lattice.corr_indx[left2_i][2] == lattice.nt
-            in_left2_1_i = -field_in[dirac_comp1(left2_i)]
-            in_left2_2_i = -field_in[dirac_comp2(left2_i)]
+        if left2_i > lattice.ntot # intend to access ghost cells
+            in_left2_1_i = 0
+            in_left2_2_i = 0
         else
-            in_left2_1_i = field_in[dirac_comp1(left2_i)]
-            in_left2_2_i = field_in[dirac_comp2(left2_i)]
+            
+            in_left2_1_i = field_in[dirac_comp1(left2_i)] * 
+                            lattice.fermibc[i, 1]
+            in_left2_2_i = field_in[dirac_comp2(left2_i)] *
+                            lattice.fermibc[i, 1]
         end
 
         link1 = lattice.linkx
@@ -45,7 +55,7 @@ function gamma5_Dslash_wilson_vector!(field_out::FlatField,
 
         field_out[dirac_comp1(i)] = factor * field_in[dirac_comp1(i)] - 0.5*(
                 link1[i]*(in_right1_1_i - in_right1_2_i) +
-                cconj_link1_left1_i * (in_left1_1_i + in_left1_2_i)  +
+                cconj_link1_left1_i * (in_left1_1_i + in_left1_2_i) +
                 link2[i] * (in_right2_1_i + im * in_right2_2_i) +
                 cconj_link2_left2_i * (in_left2_1_i - im * in_left2_2_i)
                 )
@@ -137,6 +147,8 @@ end
 """
 Convert gamma5_Dslash to LinearMap type for a given gauge configuration.
 This wrapper is required for input to IterativeSolvers and it is not optimal.
+This function uses the Dslash as defined in gamma5_Dslash_wilson_vector function
+above
 """
 function gamma5_Dslash_linearmap(lattice::Lattice, mass::Float64)
     Q(v::FlatField) = gamma5_Dslash_wilson_vector(v, lattice, mass)

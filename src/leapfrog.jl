@@ -30,7 +30,7 @@ function updategauge!(p::HMCMom, dtau::Float64, lattice::Lattice)
     for i in 1:lattice.ntot
         lattice.anglex[i] = lattice.anglex[i] + dtau*p.gpx[i]
         lattice.anglet[i] = lattice.anglet[i] + dtau*p.gpt[i]
-        # Don't forget to update the link as well
+        # Don't forget to sync the links!
         lattice.linkx[i] = cos(lattice.anglex[i]) + im*sin(lattice.anglex[i])
         lattice.linkt[i] = cos(lattice.anglet[i]) + im*sin(lattice.anglet[i])
     end

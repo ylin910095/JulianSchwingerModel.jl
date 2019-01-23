@@ -5,6 +5,7 @@ function print_lattice(lattice::Lattice)
     println("nt:         $(lattice.nt)")
     println("mass:       $(lattice.mass)")
     println("beta:       $(lattice.beta)")
+    println("boundary:   $(lattice.boundary_cond)")
     println("quenched:   $(lattice.quenched)")
     print_sep()
 end
@@ -96,7 +97,8 @@ function load_lattice(filename::String)
     close(buf)
 
     # Finally, check integrity after loading
-    lattice = Lattice(nx, nt, mass, beta, quenched, anglex, anglet)
+    lattice = Lattice(nx, nt, mass, beta, quenched, 
+                      anglex0=anglex, anglet0=anglet)
     achsum = checksum_lattice(lattice)
     if achsum != checksum
         println(achsum)
