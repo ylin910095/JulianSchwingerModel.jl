@@ -25,28 +25,24 @@ quenched = true
 
 # Which meson do we want?
 # operator = \bar{\psi} \Gamma \psi
-Gamma = Matrix{Float64}(I, 2, 2) # must be a 2x2 array
-#Gamma = gamma5
 # Metropolis controls
-iter_wait = 20 # how many iterations to wait before performing next measurements
-n1_wait = 10
+n1_wait = 8
 epsilon = 0.3
 
 
 # Which meson do we want?
 # operator = \bar{\psi} \Gamma \psi
-Gamma = Matrix{Float64}(I, 2, 2) # must be a 2x2 array
-#Gamma = gamma5
+#Gamma = Matrix{Float64}(I, 2, 2) # must be a 2x2 array
+Gamma = gamma5
 # Metropolis controls
 nthermal = 200
-iter_wait = 10 # how many iterations to wait before performing next measurements
-epsilon = 0.3
+iter_wait = 100 # how many iterations to wait before performing next measurements
 
 # Define domain according to
-# https://arxiv.org/pdf/1812.01875.pdf 
+# https://arxiv.org/pdf/1812.01875.pdf
 # Note that lambda1 has two disconnected domain lambda11 and lambda12
-Nr = 40
-x0 =  1
+Nr = 20
+x0 =  6
 
 # this is for nt = 96
 
@@ -57,11 +53,10 @@ lambda11 = 41:48
 lambda12 = 89:96
 """
 
-
-lambda0 = 1:3
-lambda2 = 17:19
-lambda11 = 4:16
-lambda12 = 20:32
+lambda0 = 1:12
+lambda2 = 17:28
+lambda11 = 13:16
+lambda12 = 29:32
 
 
 """
@@ -97,13 +92,41 @@ lambda12 = 7:8
 
 @assert (x0 in lambda0) == true "x0 must be in lambda0!"
 
-# Multi-level update parameters
-n0 = 10 # upper level measurements (whole domain)
-n1 = 10 # lower level measurements (omega0* and omega1*)
+
+load_folder = "../gauge_metropolis" # nothing or the directory containing all gauge files
+#load_folder = nothing
+if load_folder != nothing
+    series = "b"
+    start_no = 1
+    end_no = 20
+    no_sub = 20 # number of sublattices for each top level lattice
+    prefix = @sprintf "%s/l%d%db%.4fk%.4f" load_folder nx nt beta kappa
+
+    # Generate file names for both levels
+    println("--> Loading gauge files from $load_folder...")
+    n0_fn = ["$(prefix)_$(series)$(i).metro" for i in start_no:end_no]
+    n0_lat_list = [load_lattice(ifn) for ifn in n0_fn]
+    n0 = length(n0_fn)
+    n1_fn = Array{String, 2}(undef, end_no-start_no+1, no_sub)
+    n1_lat_array = Array{Lattice, 2}(undef, end_no-start_no+1, no_sub)
+    for in0 in 1:n0
+        str1 = "$(prefix)_$(series)$(in0)"
+        for in1 in 1:no_sub
+            subsavname = "$(prefix)_$(series)$(in0)_sub$(in1).metro"
+            n1_fn[in0, in1] = subsavname
+            n1_lat_array[in0, in1] = load_lattice(subsavname)
+        end
+    end
+    println("--> All loaded. Total n0 = $n0, total n1 = $(no_sub)")
+    n1 = no_sub + 1 # internal n1. Plus one to include the top level lattice
+else
+    n0 = 10
+    n1 = 300
+end
 
 # Output data filename
 t0 = minimum(lambda2) - x0
-savname = "../data/noexp_corr_domain_l$(nx)$(nt)q$(quenched)b$(beta)m$(mass)_t0$(t0).npz"
+savname = "../data/noexp_a0_corr_domain_l$(nx)$(nt)q$(quenched)b$(beta)m$(mass)_t0$(t0).npz"
 
 function decompose_domain(force=false)
     # Truncate to disconnected domains if NOT defined
@@ -120,11 +143,11 @@ function decompose_domain(force=false)
         # Enable safety check ONLY if we first truncate lattice
         # When we later update partial domain, say lambda0,
         # then the ghost cells will not be updated in lambda11
-        # and lambda12 and sanity check will fail when we try to 
+        # and lambda12 and sanity check will fail when we try to
         # stack them.
-        # TODO: automatically updating ghost cells of other domains 
+        # TODO: automatically updating ghost cells of other domains
         #       when adjacent domain is updated.
-        safety_check = true 
+        safety_check = true
     else
         safety_check = false
     end
@@ -146,13 +169,13 @@ function decompose_domain(force=false)
 end
 
 # Start doing work
-lattice = Lattice(nx, nt, mass, beta, quenched, 
+lattice = Lattice(nx, nt, mass, beta, quenched,
                   boundary_cond="periodic")
 
 """
-Create N number of Z2 random sources with two-point function of 
+Create N number of Z2 random sources with two-point function of
 <eta^dagger(x) eta(y)> = delta_{x,y}
-according to 
+according to
 https://arxiv.org/pdf/hep-lat/9308015.pdf
 and
 https://xxx.lanl.gov/pdf/hep-lat/9810021v2
@@ -164,21 +187,25 @@ ntot =  total number of lattice points (not including dirac componenets)
 function create_Z2_random_source(ntot)::Array{ComplexF64, 2}
     ret = zero(Array{ComplexF64, 2}(undef, 2, ntot))
     for i in 1:ntot
-        ret[:, i] = [randZ2() + im*randZ2(), 
+        ret[:, i] = [randZ2() + im*randZ2(),
                      randZ2() + im*randZ2()]
     end
     return ret
 end
 
 # Always thermalize first!
-print_lattice(lattice)
-print_sep()
-println("--> Begin Thermalization: total updates = $nthermal")
-print_sep()
-for i in 1:nthermal 
-    accprate = metropolis_update!(epsilon, lattice)
-    println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" i nthermal)*
-            (Printf.@sprintf ", current accp rate = %.5f)" accprate))
+if load_folder == nothing
+    print_lattice(lattice)
+    print_sep()
+    println("--> Begin Thermalization: total updates = $nthermal")
+    print_sep()
+    for i in 1:nthermal
+        accprate = metropolis_update!(epsilon, lattice)
+        println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" i nthermal)*
+                (Printf.@sprintf ", current accp rate = %.5f)" accprate))
+    end
+else
+    print_lattice(n0_lat_list[1])
 end
 
 # Container for final correlator
@@ -188,19 +215,29 @@ for imol in 1:n0
     print_sep()
     println("--> n0 updates of whole lattice: total updates = $n1")
     print_sep()
-    for ii in 1:iter_wait
-        accprate = metropolis_update!(epsilon, lattice)
-        println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" imol n0)*
-                (Printf.@sprintf ", current accp rate = %.5f)" accprate))
+    if load_folder == nothing
+        for ii in 1:iter_wait
+            accprate = metropolis_update!(epsilon, lattice)
+            println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" imol n0)*
+                    (Printf.@sprintf ", current accp rate = %.5f)" accprate))
+        end
+
+        # lattice variable will ONLY be updated with n0 update
+        # whereas latcopy will be updated within n1 updates
+        # for ease of manipulation
+        global latcopy = deepcopy(lattice)
+
+        # Force redefining regions
+        decompose_domain(true)
+    else
+        lattice = n0_lat_list[imol]
+        #println("--> Loaded gauge = $(n0_fn[imol])")
+        println(Printf.@sprintf "Measurement iterations: %4d/%4d completed" imol n0)
+
+        global latcopy = deepcopy(lattice)
+        # Force redefining regions
+        decompose_domain(true)
     end
-
-    # lattice variable will ONLY be updated with n0 update
-    # whereas latcopy will be updated within n1 updates 
-    # for ease of manipulation
-    global latcopy = deepcopy(lattice) 
-
-    # Force redefining regions
-    decompose_domain(true)
 
     # Create noise vectors at the interior boundary of lambda0
     noise_vec = zero(Array{ComplexF64, 3}(undef, Nr, 2, 2*nx))
@@ -211,9 +248,9 @@ for imol in 1:n0
     end
 
     # Internal boundaries of lambda1 in lambda1
-    lam1_1min = 1 
+    lam1_1min = 1
     lam1_1max = nx
-    lam1_2min = lat_lambda11.ntot - nx + 1 
+    lam1_2min = lat_lambda11.ntot - nx + 1
     lam1_2max = lat_lambda11.ntot
     lam1_3min = lat_lambda11.ntot + 1
     lam1_3max = lat_lambda11.ntot + nx
@@ -224,14 +261,14 @@ for imol in 1:n0
     lam1_t3 = lam1_3min : lam1_3max
     lam1_t4 = lam1_4min : lam1_4max
 
-    # Internal boundaries of lambda1 in omega1s 
-    lam1_omega1s_1min = 1 
+    # Internal boundaries of lambda1 in omega1s
+    lam1_omega1s_1min = 1
     lam1_omega1s_1max = nx
-    lam1_omega1s_2min = lat_lambda11.ntot -  lat_lambda11.nx + 1 
+    lam1_omega1s_2min = lat_lambda11.ntot -  lat_lambda11.nx + 1
     lam1_omega1s_2max = lat_lambda11.ntot
     lam1_omega1s_3min = lat_lambda11.ntot + lat_lambda2.ntot + 1
     lam1_omega1s_3max = lat_lambda11.ntot + lat_lambda2.ntot + nx
-    lam1_omega1s_4min = lat_omega1s.ntot - nx + 1 
+    lam1_omega1s_4min = lat_omega1s.ntot - nx + 1
     lam1_omega1s_4max = lat_omega1s.ntot
     lam1_omega1s_t1 = lam1_omega1s_1min : lam1_omega1s_1max
     lam1_omega1s_t2 = lam1_omega1s_2min : lam1_omega1s_2max
@@ -241,7 +278,7 @@ for imol in 1:n0
     # Interior boundaries of lambda0 in omega0s
     bt1 = lat_lambda12.ntot + 1
     bt2 = lat_lambda12.ntot + lat_lambda0.ntot - nx + 1
-    lam0_omega0s_t1 = bt1:bt1+nx-1 
+    lam0_omega0s_t1 = bt1:bt1+nx-1
     lam0_omega0s_t2 = bt2:bt2+nx-1
 
     # Interior boundaries of lambda0 in the whole lattice
@@ -262,14 +299,27 @@ for imol in 1:n0
     println("--> n1 updates of lambda0: total updates = $n1")
     print_sep()
     for in1_omega0s in 1:n1
-        for i in 1:n1_wait
-            accprate = metropolis_update!(epsilon, lat_lambda0)
-            println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" in1_omega0s n1)*
-                    (Printf.@sprintf ", current accp rate = %.2f)" accprate))
+        if load_folder == nothing
+            for ii in 1:n1_wait
+                accprate = metropolis_update!(epsilon, lat_lambda0)
+                println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" in1_omega0s n1)*
+                        (Printf.@sprintf ", current accp rate = %.2f)" accprate))
+            end
+            # Decompose domain after each update
+            decompose_domain()
+        else
+            # First measurement on top level lattice
+            if in1_omega0s == 1
+                lattice = n0_lat_list[imol]
+                lgfn = n0_fn[imol]
+            else
+                lattice = n1_lat_array[imol, in1_omega0s-1]
+                lgfn = n1_fn[imol, in1_omega0s-1]
+            end
+            println("--> Loaded gauge = $(lgfn)")
+            global latcopy = deepcopy(lattice)
+            decompose_domain(true)
         end
-
-        # Decompose domain after each update
-        decompose_domain()
 
         # Now make wallsource for omega0s domain
         wallsource1 = zero(FlatField(undef, 2*lat_omega0s.ntot)) # first dirac component
@@ -288,12 +338,12 @@ for imol in 1:n0
 
         # Use the wallsource to invert propagator in omega0s domain
         Q_omega0s = gamma5_Dslash_linearmap(lat_omega0s, lat_omega0s.mass)
-        prop = [minres_Q(Q_omega0s, lat_omega0s, 
+        prop = [minres_Q(Q_omega0s, lat_omega0s,
                         lat_omega0s.mass, wallsource1),
-                minres_Q(Q_omega0s, lat_omega0s, 
+                minres_Q(Q_omega0s, lat_omega0s,
                         lat_omega0s.mass, wallsource2)]
 
-        # Create matrix field as usual 
+        # Create matrix field as usual
         Dinv_omega0s = zero(Array{ComplexF64}(undef, 2, lat_omega0s.ntot, 2))
         tensorprop1 = reshape(prop[1], (2, lat_omega0s.ntot))
         tensorprop2 = reshape(prop[2], (2, lat_omega0s.ntot))
@@ -309,7 +359,7 @@ for imol in 1:n0
         # in the whole lattice. ONLY lambda0 values are retained, the rest
         # of values MUST BE ZEROS. If not set to zeros, it will again fail.
         Dinv_omega0s_whole[:,1:lat_lambda0.ntot,:] = Dinv_omega0s[:,lat_lambda12.ntot+1:lat_lambda12.ntot+lat_lambda0.ntot,:]
-            
+
         # Flatten it so we can use linearmap
         Dinv_omega0s_whole = reshape(Dinv_omega0s_whole, 2*latcopy.ntot, 2)
         Qwhole = gamma5_Dslash_linearmap(latcopy, latcopy.mass)
@@ -322,7 +372,7 @@ for imol in 1:n0
         if exact == true
             wallsource1 = zero(FlatField(undef, 2*nx*nt)) # first dirac component
             wallsource2 = zero(FlatField(undef, 2*nx*nt)) # second dirac component
-        
+
             # Loop over all lattice sites
             for i in 1:lattice.ntot
                 # Convert linear index to coordinates (x, t)
@@ -341,21 +391,21 @@ for imol in 1:n0
             print_sep()
             println()
             """
-        
+
             # Use the wallsource to invert propagator in omega0s domain
             Q = gamma5_Dslash_linearmap(lattice, lattice.mass)
-            prop = [minres_Q(Q, lattice, 
+            prop = [minres_Q(Q, lattice,
                             lattice.mass, wallsource1),
-                    minres_Q(Q, lattice, 
+                    minres_Q(Q, lattice,
                             lattice.mass, wallsource2)]
-        
-            # Create matrix field as usual 
+
+            # Create matrix field as usual
             Dinv_omega0s_whole = zero(Array{ComplexF64}(undef, 2*lattice.ntot, 2))
             #tensorprop1 = reshape(prop[1], (2, lattice.ntot))
             #tensorprop2 = reshape(prop[2], (2, lattice.ntot))
             Dinv_omega0s_whole[:, 1] = prop[1]
             Dinv_omega0s_whole[:, 2] = prop[2]
-        
+
             # Truncate to lambda0
             for i in 1:lattice.ntot
                 if (i in 1:lat_lambda0.ntot) == false
@@ -416,10 +466,10 @@ for imol in 1:n0
         # The order of index ranges are VERY important
         # This has to be consistent with how with do sum in the latter update
         # and the order present below is correct (from small to large timeslices)
-        A[:, :, 1] = cat(temp1[:, lat_lambda0.ntot+1:lat_lambda11.ntot+lat_lambda0.ntot], 
-                         temp1[:, latcopy.ntot - lat_lambda12.ntot + 1:latcopy.ntot], 
+        A[:, :, 1] = cat(temp1[:, lat_lambda0.ntot+1:lat_lambda11.ntot+lat_lambda0.ntot],
+                         temp1[:, latcopy.ntot - lat_lambda12.ntot + 1:latcopy.ntot],
                          dims=2)
-        A[:, :, 2] = cat(temp2[:, lat_lambda0.ntot+1:lat_lambda11.ntot+lat_lambda0.ntot], 
+        A[:, :, 2] = cat(temp2[:, lat_lambda0.ntot+1:lat_lambda11.ntot+lat_lambda0.ntot],
                          temp2[:, latcopy.ntot - lat_lambda12.ntot + 1:latcopy.ntot],
                          dims=2)
         """
@@ -427,8 +477,8 @@ for imol in 1:n0
         # Cast to whole lattice
         A[:, :, 1] = temp1
         A[:, :, 2] = temp2
-        
-        
+
+
 
         if false
             # Only nonzero components are on the interior boundaries of lambda1
@@ -445,19 +495,19 @@ for imol in 1:n0
         # Construct Q^{-1}_{\Omega_0^*}(x, k) for k_0 in interior boundaries of lambda0
         Dinv_omega0s_k = zero(Array{ComplexF64}(undef, 2, 2*nx, 2))
         # Left/right boundary beginning linear indices in omega0s
-        Dinv_omega0s_k[:, 1:nx, :] = 
+        Dinv_omega0s_k[:, 1:nx, :] =
             Dinv_omega0s[:,lat_lambda12.ntot+1:lat_lambda12.ntot+nx, :]
-        Dinv_omega0s_k[:, nx+1:2*nx, :] = 
+        Dinv_omega0s_k[:, nx+1:2*nx, :] =
             Dinv_omega0s[:, lat_lambda12.ntot+lat_lambda0.ntot-nx+1:lat_lambda12.ntot+lat_lambda0.ntot, :]
 
         B = zero(Array{ComplexF64}(undef, Nr, 2))
         TensorOperations.@tensor begin
             B[i, a] = conj(Dinv_omega0s_k[w, isum, a]) * noise_vec[i, w, isum]
         end
-        # Tieup A, B, Gamma 
+        # Tieup A, B, Gamma
         phi_temp = zero(Array{ComplexF64, 3}(undef, Nr, 2, latcopy.ntot))
         TensorOperations.@tensor begin
-            phi_temp[i, a, m] = A[a, m, u] * Gamma[u, w] * B[i, w] 
+            phi_temp[i, a, m] = A[a, m, u] * Gamma[u, w] * B[i, w]
         end
 
         phi[in1_omega0s, :, :, :] = phi_temp
@@ -476,14 +526,27 @@ for imol in 1:n0
     println("--> n1 updates of lambda2: total updates = $n1")
     print_sep()
     for in1_omega1s in 1:n1
-        for i in 1:n1_wait
-            accprate = metropolis_update!(epsilon, lat_lambda2)
-            println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" in1_omega1s n1)*
-                    (Printf.@sprintf ", current accp rate = %.2f)" accprate))
+        if load_folder == nothing
+            for ii in 1:n1_wait
+                accprate = metropolis_update!(epsilon, lat_lambda2)
+                println((Printf.@sprintf "Measurement iterations: %4d/%4d completed" in1_omega1s n1)*
+                        (Printf.@sprintf ", current accp rate = %.2f)" accprate))
+            end
+            # Decompose domain again after each update
+            decompose_domain()
+        else
+            # First measurement on top level lattice
+            if in1_omega1s == 1
+                lattice = n0_lat_list[imol]
+                lgfn = n0_fn[imol]
+            else
+                lattice = n1_lat_array[imol, in1_omega1s-1]
+                lgfn = n1_fn[imol, in1_omega1s-1]
+            end
+            println("--> Loaded gauge = $(lgfn)")
+            global latcopy = deepcopy(lattice)
+            decompose_domain(true)
         end
-
-        # Decompose domain again after each update
-        decompose_domain()
 
         # First need to create sources for sequential inversions
         # for each noise vector
@@ -504,7 +567,7 @@ for imol in 1:n0
             lhs = Q * reshape(rhs, (2*latcopy.ntot))
             lhs = reshape(lhs, (2, latcopy.ntot))
             # Trim it down to omega1s
-            s2[:, 1:nx] = lhs[:, lat_lambda0.ntot+1:lat_lambda0.ntot+nx] 
+            s2[:, 1:nx] = lhs[:, lat_lambda0.ntot+1:lat_lambda0.ntot+nx]
             s2[:, lat_lambda11.ntot-nx+1:lat_lambda11.ntot] = (
                 lhs[:, lat_lambda0.ntot+lat_lambda11.ntot-nx+1:lat_lambda0.ntot+lat_lambda11.ntot]
             )
@@ -517,11 +580,11 @@ for imol in 1:n0
             s1 = reshape(s1, (2*size(s1)[2]))
             s2 = reshape(s2, (2*size(s2)[2]))
             Q_omega1s = gamma5_Dslash_linearmap(lat_omega1s, lat_omega1s.mass)
-            seqprop = [minres_Q(Q_omega1s, lat_omega1s, 
+            seqprop = [minres_Q(Q_omega1s, lat_omega1s,
                                 lat_omega1s.mass, s1),
-                       minres_Q(Q_omega1s, lat_omega1s, 
+                       minres_Q(Q_omega1s, lat_omega1s,
                                 lat_omega1s.mass, s2)]
-            
+
             # Now the final tieups to form raw correlator
             temp1 = reshape(seqprop[1], (2, lat_omega1s.ntot))
             temp2 = reshape(seqprop[2], (2, lat_omega1s.ntot))
@@ -543,7 +606,7 @@ for imol in 1:n0
         end # random source iteration
     end # n1 updates for lambda2 region
 
-    # Now we need to do n1 and random sources averaging and 
+    # Now we need to do n1 and random sources averaging and
     # project to zero momentum at sink
     n1_corr = reshape(n1_corr, (n1, Nr, lat_lambda2.nx, lat_lambda2.nt)) # orde of nx and nt is important
     n1_corr = Statistics.mean(n1_corr, dims=3) # zero momentum projection
@@ -551,7 +614,7 @@ for imol in 1:n0
     n1_corr = Statistics.mean(n1_corr, dims=2) # random sources averaging
     n1_corr = n1_corr[:, 1, :]
     n1_corr = Statistics.mean(n1_corr, dims=1) # n1 averaging
-    n1_corr = n1_corr[1, :] 
+    n1_corr = n1_corr[1, :]
     println()
     println("--> Current measurement: ")
     println(n1_corr)
