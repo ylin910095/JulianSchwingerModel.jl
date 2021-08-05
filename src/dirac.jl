@@ -94,7 +94,7 @@ Another implementation of gamma5_Dslash but using
 matrix multiplication instead of explicit assignment
 to real and imaginary part.
 This is slow and should not be used in production, for
-validation of gamma5_Dslash_wilson only.
+validating gamma5_Dslash_wilson only.
 """
 function gamma5_Dslash_wilson_matrix(field_in::Field,
                                      lattice::Lattice,
