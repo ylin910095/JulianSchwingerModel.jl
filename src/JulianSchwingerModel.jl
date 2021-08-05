@@ -18,7 +18,7 @@ include("lattice.jl")
 
 # --------------------------------------------------------------------
 
-# spinor field type definitions and basic manipulating functions
+# Spinor field type definitions and basic manipulating functions
 include("spinor.jl")
 
 # Gamma matrices definitions
