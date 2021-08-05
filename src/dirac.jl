@@ -1,9 +1,9 @@
 """
 gamma5*Dslash operator
 Gauge fields have periodic boundary condition in all directions, whereas
-fermions are periodic in spacelike direction (x-direction or 1 direction) and
-antiperiodic in timelike direction (t-direction or 2 direction).
-This is the fastest version of Dslash operates directly on FlatField. 
+fermions are periodic in the spacelike direction (x-direction or 1 direction) and
+antiperiodic in the timelike direction (t-direction or 2 direction).
+This is the fastest version of Dslash operates acting directly on FlatField. 
 """
 function gamma5_Dslash_wilson_vector!(field_out::FlatField,
                                       field_in::FlatField,
