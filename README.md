@@ -7,8 +7,8 @@ http://theor.jinr.ru/~diastp/summer11/lectures/Urbach-2.pdf
 # Using this code
 
 This code has been tested on Mac OSX, but should work for any architechure
-and operating system that uses Julia. You will need julia v1.0.1 to run this code,
-it can be downloaded here:
+and operating system that uses julia (tested on v1.6.2 as of Aug 5, 2021).
+The latest version can be downloaded here:
 
    https://julialang.org/downloads/
 
@@ -34,11 +34,13 @@ To run this package from the Terminal, you must first make the julia executable
 visible to your environment. To do this, create a soft link in your local bin
 directory, for example:
 
-	   ln -s /Applications/Julia-1.0.1.app/Contents/Resources/julia/bin/julia /usr/local/bin/julia
+	   ln -s /Applications/Julia-1.6.app/Contents/Resources/julia/bin/julia /usr/local/bin/julia
 
 Then change directory to 'example' and run the command:
 
      cd example
      julia pion_corr.jl
+
+Note that in order to be able to run the example, both `TensorOperations.jl` and `NPZ.jl` must be added to julia.
 
 
